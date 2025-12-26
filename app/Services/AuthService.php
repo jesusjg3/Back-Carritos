@@ -4,38 +4,27 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\UserRepository;
-use Illuminate\Support\Facades\Hash;
+use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\DB;
 
 class AuthService
 {
     protected UserRepository $userRepo;
+    protected RolRepository $rolRepo;
 
-    public function __construct(UserRepository $userRepo)
+    public function __construct(UserRepository $userRepo, RolRepository $rolRepo)
     {
         $this->userRepo = $userRepo;
+        $this->rolRepo = $rolRepo;
     }
 
     public function login(string $email, string $password)
     {
-        $user = $this->userRepo->findByEmail($email);
-
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$token = auth()->attempt(['email' => $email, 'password' => $password])) {
             throw new \Exception('Invalid credentials');
         }
 
-        $user->load('role');
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return [
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role->name,
-            ]
-        ];
+        return $this->respondWithToken($token);
     }
 
     public function register(array $data)
@@ -43,22 +32,56 @@ class AuthService
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role_id' => $data['role_id'],
+            'password' => $data['password'],
+            'rol_id' => $data['role_id'],
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = auth()->login($user);
 
-        return [
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role->name,
-            ]
-        ];
+        return $this->respondWithToken($token);
     }
 
 
+    public function logout()
+    {
+        auth()->logout();
+        return true;
+    }
+
+    protected function respondWithToken($token)
+    {
+        return [
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60,
+        ];
+    }
+
+    // Admin Features
+    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive)
+    {
+        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive);
+    }
+
+    public function createDriver(array $data)
+    {
+        // Find conductor role ID
+        $driverRole = $this->rolRepo->findByName('conductor');
+
+        return $this->userRepo->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'rol_id' => $driverRole->id,
+            'is_active' => true,
+        ]);
+    }
+
+    public function toggleUserStatus(int $id)
+    {
+        return $this->userRepo->toggleStatus($id);
+    }
 }
+
+
+

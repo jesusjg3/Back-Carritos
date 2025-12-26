@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class RoleMiddleware
+class CheckActiveUser
 {
     /**
      * Handle an incoming request.
@@ -15,6 +15,10 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->user() && !$request->user()->is_active) {
+            return response()->json(['message' => 'Tu cuenta ha sido desactivada.'], 403);
+        }
+
         return $next($request);
     }
 }

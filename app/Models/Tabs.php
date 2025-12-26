@@ -18,3 +18,6 @@ class Tabs extends Model
         return $this->belongsTo(Rol::class);
     }
 }
+
+
+

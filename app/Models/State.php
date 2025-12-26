@@ -14,8 +14,11 @@ class State extends Model
         'state_name',
     ];
 
-    public function careers()
+    public function Trips()
     {
-        return $this->hasMany(Career::class);
+        return $this->hasMany(Trip::class);
     }
 }
+
+
+

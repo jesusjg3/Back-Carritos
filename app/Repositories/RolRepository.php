@@ -16,6 +16,12 @@ class RolRepository
         return Rol::findOrFail($id);
     }
 
+    public function findByName(string $name)
+    {
+        return Rol::where('rol_name', $name)->firstOrFail();
+    }
+
+
     public function create(array $data)
     {
         return Rol::create($data);
@@ -35,3 +41,6 @@ class RolRepository
         return $rol->delete();
     }
 }
+
+
+

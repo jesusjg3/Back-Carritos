@@ -63,3 +63,4 @@ class TabSeeder extends Seeder
         }
     }
 }
+

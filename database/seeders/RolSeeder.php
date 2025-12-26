@@ -18,3 +18,4 @@ class RolSeeder extends Seeder
         Rol::firstOrCreate(['rol_name' => 'conductor']);
     }
 }
+

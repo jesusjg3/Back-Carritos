@@ -5,21 +5,29 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\TabsController;
-use App\Http\Controllers\CareerController;
-use App\Http\Controllers\CareerPositionController;
-use App\Http\Controllers\CareerRatingController;
+use App\Http\Controllers\TripController;
+use App\Http\Controllers\TripPositionController;
+use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:api');
 
 // Auth Public Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-// Rutas protegidas por autenticación
-Route::middleware('auth:sanctum')->group(function () {
+// Logout (Protected by auth but allowing inactive users to logout)
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
+
+// Rutas protegidas por autenticación y usuario activo
+Route::middleware(['auth:api', 'is_active'])->group(function () {
+
+    // Admin Users Management
+    Route::get('/users', [AuthController::class, 'listUsers']);
+    Route::post('/users/drivers', [AuthController::class, 'storeDriver']);
+    Route::patch('/users/{id}/toggle-status', [AuthController::class, 'toggleStatus']);
 
     // Roles
     Route::apiResource('rols', RolController::class);
@@ -30,14 +38,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tabs
     Route::apiResource('tabs', TabsController::class);
 
-    // Careers
-    Route::post('/careers/request', [CareerController::class, 'request']);
-    Route::post('/careers/{id}/accept', [CareerController::class, 'accept']);
-    Route::post('/careers/{id}/finish', [CareerController::class, 'finish']);
+    // Trips
+    Route::post('/trips/request', [TripController::class, 'request']);
+    Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
+    Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
 
-    // Career Positions
-    Route::post('/careers/{id}/position', [CareerPositionController::class, 'store']);
+    // Trip Positions
+    Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
 
-    // Career Ratings
-    Route::post('/careers/{id}/rate', [CareerRatingController::class, 'store']);
+    // Trip Ratings
+    Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
 });
+

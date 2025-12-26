@@ -25,3 +25,4 @@ class StateSeeder extends Seeder
         State::firstOrCreate(['id' => 4], ['state_name' => 'CANCELADO']);
     }
 }
+
