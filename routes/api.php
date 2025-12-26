@@ -12,17 +12,17 @@ use App\Http\Controllers\AuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:api');
 
 // Auth Public Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Logout (Protected by auth but allowing inactive users to logout)
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
 
 // Rutas protegidas por autenticación y usuario activo
-Route::middleware(['auth:sanctum', 'is_active'])->group(function () {
+Route::middleware(['auth:api', 'is_active'])->group(function () {
 
     // Admin Users Management
     Route::get('/users', [AuthController::class, 'listUsers']);

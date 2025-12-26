@@ -40,10 +40,10 @@ class AuthController extends Controller
         }
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(): JsonResponse
     {
         try {
-            $this->authService->logout($request->user());
+            $this->authService->logout();
             return response()->json(['message' => 'Cierre de sesión exitoso']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

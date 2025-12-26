@@ -17,7 +17,7 @@ class TripPositionService
         TripPositionRepository $tripPositionRepo,
         TripRepository $tripRepo
     ) {
-        $this->TripPositionRepo = $tripPositionRepo;
+        $this->tripPositionRepo = $tripPositionRepo;
         $this->tripRepo = $tripRepo;
     }
 
@@ -29,8 +29,8 @@ class TripPositionService
             throw new ModelNotFoundException("Carrera no encontrada");
         }
 
-        return $this->TripPositionRepo->create([
-            'Trip_id' => $trip->id,
+        return $this->tripPositionRepo->create([
+            'trip_id' => $trip->id,
             'lat' => $lat,
             'lng' => $lng,
             'type' => $type,

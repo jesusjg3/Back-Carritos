@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class TripRating extends Model
 {
     protected $fillable = [
-        'Trip_id',
+        'trip_id',
         'emitter_id',
         'receiver_id',
         'rating',
         'comment',
     ];
 
-    public function Trip()
+    public function trip()
     {
         return $this->belongsTo(Trip::class);
     }

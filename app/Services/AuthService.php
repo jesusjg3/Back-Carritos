@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
 class AuthService
@@ -21,25 +20,11 @@ class AuthService
 
     public function login(string $email, string $password)
     {
-        $user = $this->userRepo->findByEmail($email);
-
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$token = auth()->attempt(['email' => $email, 'password' => $password])) {
             throw new \Exception('Invalid credentials');
         }
 
-        $user->load('rol');
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return [
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->rol->rol_name,
-            ]
-        ];
+        return $this->respondWithToken($token);
     }
 
     public function register(array $data)
@@ -53,25 +38,25 @@ class AuthService
             ]);
         });
 
-        $user->load('rol');
+        $token = auth()->login($user);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return [
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->rol->rol_name ?? 'Unknown',
-            ]
-        ];
+        return $this->respondWithToken($token);
     }
 
 
-    public function logout(User $user)
+    public function logout()
     {
-        return $user->currentAccessToken()->delete();
+        auth()->logout();
+        return true;
+    }
+
+    protected function respondWithToken($token)
+    {
+        return [
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60,
+        ];
     }
 
     // Admin Features

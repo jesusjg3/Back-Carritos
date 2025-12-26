@@ -21,7 +21,7 @@ class TripRatingService
         TripRepository $tripRepo,
         UserRepository $userRepo
     ) {
-        $this->TripRatingRepo = $tripRatingRepo;
+        $this->tripRatingRepo = $tripRatingRepo;
         $this->tripRepo = $tripRepo;
         $this->userRepo = $userRepo;
     }
@@ -56,8 +56,8 @@ class TripRatingService
             throw new \Exception('Puntaje inválido');
         }
 
-        $rating = $this->TripRatingRepo->create([
-            'Trip_id' => $trip->id,
+        $rating = $this->tripRatingRepo->create([
+            'trip_id' => $trip->id,
             'emitter_id' => $fromUser->id,
             'receiver_id' => $toUser->id,
             'rating' => $score,
@@ -66,7 +66,7 @@ class TripRatingService
 
         return [
             'id' => $rating->id,
-            'Trip_id' => $rating->Trip_id,
+            'trip_id' => $rating->trip_id,
             'rating' => $rating->rating,
             'comment' => $rating->comment,
             'emitter' => [

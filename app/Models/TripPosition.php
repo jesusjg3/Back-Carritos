@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class TripPosition extends Model
 {
     protected $fillable = [
-        'Trip_id',
+        'trip_id',
         'driver_id',
         'lat',
         'lng',
     ];
 
-    public function Trip()
+    public function trip()
     {
         return $this->belongsTo(Trip::class);
     }
