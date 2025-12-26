@@ -29,14 +29,12 @@ class AuthService
 
     public function register(array $data)
     {
-        $user = DB::transaction(function () use ($data) {
-            return $this->userRepo->create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => $data['password'],
-                'rol_id' => $data['role_id'],
-            ]);
-        });
+        $user = $this->userRepo->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'rol_id' => $data['role_id'],
+        ]);
 
         $token = auth()->login($user);
 
