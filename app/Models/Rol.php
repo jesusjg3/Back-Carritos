@@ -20,3 +20,6 @@ class Rol extends Model
         return $this->hasMany(Tabs::class);
     }
 }
+
+
+

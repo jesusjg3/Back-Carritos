@@ -20,4 +20,23 @@ class RegisterRequest extends FormRequest
             'role_id' => 'required|exists:rols,id',
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'El nombre es obligatorio.',
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'El correo electrónico debe ser válido.',
+            'email.unique' => 'Este correo electrónico ya está registrado.',
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'role_id.required' => 'El rol es obligatorio.',
+            'role_id.exists' => 'El rol seleccionado no es válido.',
+        ];
+    }
+
+
 }
+
+
+

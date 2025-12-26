@@ -38,3 +38,6 @@ class TabsService
         return $this->tabsRepository->delete($id);
     }
 }
+
+
+

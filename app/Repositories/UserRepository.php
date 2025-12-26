@@ -9,7 +9,29 @@ class UserRepository
 {
     public function all()
     {
-        return User::all();
+        return User::with('rol')->get();
+    }
+
+    public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?bool $isActive = null)
+    {
+        $query = User::with('rol');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($roleId) {
+            $query->where('rol_id', $roleId);
+        }
+
+        if ($isActive !== null) {
+            $query->where('is_active', $isActive);
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function find($id)
@@ -19,7 +41,7 @@ class UserRepository
 
     public function findByEmail($email)
     {
-        return User::where('email', $email)->with('role')->first();
+        return User::where('email', $email)->with('rol')->first();
     }
 
     public function create(array $data)
@@ -44,4 +66,15 @@ class UserRepository
     {
         return User::findOrFail($id)->delete();
     }
+
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+        $user->is_active = !$user->is_active;
+        $user->save();
+        return $user;
+    }
 }
+
+
+

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Career extends Model
+class Trip extends Model
 {
     protected $fillable = [
         'passenger_id',
@@ -34,11 +34,14 @@ class Career extends Model
 
     public function positions()
     {
-        return $this->hasMany(CareerPosition::class);
+        return $this->hasMany(TripPosition::class);
     }
 
     public function ratings()
     {
-        return $this->hasMany(CareerRating::class);
+        return $this->hasMany(TripRating::class);
     }
 }
+
+
+

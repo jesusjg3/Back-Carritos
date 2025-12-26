@@ -4,19 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CareerRating extends Model
+class TripRating extends Model
 {
     protected $fillable = [
-        'career_id',
+        'Trip_id',
         'emitter_id',
         'receiver_id',
         'rating',
         'comment',
     ];
 
-    public function career()
+    public function Trip()
     {
-        return $this->belongsTo(Career::class);
+        return $this->belongsTo(Trip::class);
     }
 
     public function emitter()
@@ -29,3 +29,6 @@ class CareerRating extends Model
         return $this->belongsTo(User::class, 'receiver_id');
     }
 }
+
+
+

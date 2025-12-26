@@ -8,9 +8,9 @@ return new class extends Migration {
 
     public function up(): void
     {
-        Schema::create('careers_positions', function (Blueprint $table) {
+        Schema::create('trip_positions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('career_id')->constrained('careers')->cascadeOnDelete();
+            $table->foreignId('trip_id')->constrained('trips')->cascadeOnDelete();
             $table->foreignId('driver_id')->constrained('users')->cascadeOnDelete();
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
@@ -20,6 +20,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('careers_positions');
+        Schema::dropIfExists('trip_positions');
     }
 };
