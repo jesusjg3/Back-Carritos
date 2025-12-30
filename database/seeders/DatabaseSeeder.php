@@ -23,12 +23,29 @@ class DatabaseSeeder extends Seeder
             TabSeeder::class,
         ]);
 
+        $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();
         $pasajeroRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
+        $conductorRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'rol_id' => $pasajeroRole->id ?? 1,
+            'name' => 'Admin User',
+            'email' => 'admin@test.com',
+            'password' => bcrypt('12345678'),
+            'rol_id' => $adminRole->id ?? 1,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Pasajero User',
+            'email' => 'pasajero@test.com',
+            'password' => bcrypt('12345678'),
+            'rol_id' => $pasajeroRole->id ?? 2,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Conductor User',
+            'email' => 'conductor@test.com',
+            'password' => bcrypt('12345678'),
+            'rol_id' => $conductorRole->id ?? 3,
         ]);
     }
 }

@@ -1,58 +1,97 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Back-Carritos Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![Laravel Logo](https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg)](https://laravel.com)
 
-## About Laravel
+This is the backend API for the Carritos mobile application, built with Laravel.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Prerequisites
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP >= 8.2
+- Composer
+- PostgreSQL
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Installation & Setup
 
-## Learning Laravel
+Follow these steps to set up the project locally:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. **Clone the repository**
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+    ```bash
+    git clone <repository-url>
+    cd Back-Carritos
+    ```
 
-## Laravel Sponsors
+2. **Install PHP Dependencies**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+    ```bash
+    composer install
+    ```
 
-### Premium Partners
+3. **Environment Configuration**
+    Copy the example environment file and configure it:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+    ```bash
+    cp .env.example .env
+    ```
 
-## Contributing
+    Update the `.env` file with your database credentials:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+    ```ini
+    DB_CONNECTION=pgsql
+    DB_HOST=127.0.0.1
+    DB_PORT=5432
+    DB_DATABASE=backphp
+    DB_USERNAME=your_username
+    DB_PASSWORD=your_password
+    ```
 
-## Code of Conduct
+4. **Database Permissions (Important)**
+    Ensure your database user has the necessary permissions on the `public` schema. If you encounter permission errors, run:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    ```bash
+    sudo -u postgres psql -d <database_name> -c 'GRANT ALL ON SCHEMA public TO <your_username>;'
+    ```
 
-## Security Vulnerabilities
+5. **Generate Application Key**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    ```bash
+    php artisan key:generate
+    ```
+
+6. **Generate JWT Secret**
+    Required for authentication:
+
+    ```bash
+    php artisan jwt:secret
+    ```
+
+7. **Run Migrations & Seeders**
+    Create tables and populate initial data (roles, etc.):
+
+    ```bash
+    php artisan migrate
+    php artisan db:seed
+    ```
+
+### Test Users
+
+Use these accounts to log in after running the seeders:
+
+- **Admin**: `admin@test.com` / `12345678`
+- **Pasajero**: `pasajero@test.com` / `12345678`
+- **Conductor**: `conductor@test.com` / `12345678`
+
+## Useful Commands
+
+- **Run Server**: `php artisan serve`
+- **Tinker**: `php artisan tinker`
+- **Route List**: `php artisan route:list`
+
+## Troubleshooting
+
+- **Undefined table "rols"**: Ensure you have run `php artisan migrate`.
+- **JWTException: Secret is not set**: Run `php artisan jwt:secret`.
+- **Permission denied for schema public**: Grant schema permissions to your DB user (see Step 4).
 
 ## License
 
