@@ -15,7 +15,7 @@ class TripController extends Controller
 
     public function __construct(TripService $tripService)
     {
-        $this->TripService = $tripService;
+        $this->tripService = $tripService;
     }
 
     /**
@@ -24,7 +24,7 @@ class TripController extends Controller
     public function request(StoreTripRequest $request): JsonResponse
     {
         $user = Auth::user();
-        $trip = $this->TripService->requestTrip($request->validated(), $user);
+        $trip = $this->tripService->requestTrip($request->validated(), $user);
 
         return response()->json($trip, 201);
     }
@@ -36,13 +36,12 @@ class TripController extends Controller
     {
         $user = Auth::user();
 
-        $trip = Trip::findOrFail($id);
-
         try {
-            $updatedTrip = $this->TripService->acceptTrip($trip, $user);
+            $updatedTrip = $this->tripService->acceptTripById($id, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            $status = $e->getCode() === 409 ? 409 : 400;
+            return response()->json(['error' => $e->getMessage()], $status);
         }
     }
 
@@ -53,10 +52,7 @@ class TripController extends Controller
     {
         $trip = Trip::findOrFail($id);
 
-        $updatedTrip = $this->TripService->finishTrip($trip);
+        $updatedTrip = $this->tripService->finishTrip($trip);
         return response()->json($updatedTrip);
     }
 }
-
-
-

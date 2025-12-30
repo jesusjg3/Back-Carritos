@@ -1,0 +1,77 @@
+### Global Variables
+@baseUrl = http://127.0.0.1:8000/api
+@passengerEmail = pasajero@test.com
+@driverAEmail = conductor@test.com
+@driverBEmail = admin@test.com
+@password = 12345678
+
+### 1. Login Passenger
+# @name loginPassenger
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{passengerEmail}}",
+    "password": "{{password}}"
+}
+
+### VARIABLE: Passenger Token
+@passengerToken = {{loginPassenger.response.body.access_token}}
+
+### 2. Login Driver A
+# @name loginDriverA
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{driverAEmail}}",
+    "password": "{{password}}"
+}
+
+### VARIABLE: Driver A Token
+@driverAToken = {{loginDriverA.response.body.access_token}}
+
+### 3. Login Driver B
+# @name loginDriverB
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{driverBEmail}}",
+    "password": "{{password}}"
+}
+
+### VARIABLE: Driver B Token
+@driverBToken = {{loginDriverB.response.body.access_token}}
+
+
+### 4. Create Trip (Passenger)
+# @name createTrip
+POST {{baseUrl}}/trips/request
+Content-Type: application/json
+Authorization: Bearer {{passengerToken}}
+
+{
+    "origin_lat": -16.409047,
+    "origin_lng": -71.537451,
+    "destination_lat": -16.415000,
+    "destination_lng": -71.538000,
+    "distance": 5.20
+}
+
+### VARIABLE: Trip ID
+@tripId = {{createTrip.response.body.id}}
+
+
+### 5. Accept Trip (Driver A) - SHOULD SUCCEED
+# @name acceptTripA
+POST {{baseUrl}}/trips/{{tripId}}/accept
+Content-Type: application/json
+Authorization: Bearer {{driverAToken}}
+
+
+### 6. Accept Trip (Driver B) - SHOULD FAIL (409 Conflict)
+# @name acceptTripB
+POST {{baseUrl}}/trips/{{tripId}}/accept
+Content-Type: application/json
+Authorization: Bearer {{driverBToken}}
