@@ -27,6 +27,9 @@ class TripService
     /**
      * Usuario solicita carrera
      */
+    /**
+     * Usuario solicita carrera
+     */
     public function requestTrip(array $data, User $user)
     {
         return DB::transaction(function () use ($data, $user) {
@@ -37,26 +40,51 @@ class TripService
             ]));
 
             $trip->load(['passenger', 'driver', 'state']);
+
+            // Broadcast event to drivers
+            broadcast(new \App\Events\NewTripRequest($trip))->toOthers();
+
             return $this->formatTripResponse($trip);
         });
     }
 
     /**
-     * Conductor acepta carrera
+     * Conductor acepta carrera (with Race Condition protection)
+     */
+    public function acceptTripById(int $tripId, User $driver)
+    {
+        return DB::transaction(function () use ($tripId, $driver) {
+            // 1. LOCK the row for update
+            $trip = Trip::where('id', $tripId)->lockForUpdate()->firstOrFail();
+
+            // 2. Critical Validation
+            if ($trip->state_id !== State::REQUESTED || $trip->driver_id !== null) {
+                // Return a specific structure or throw an exception that Controller catches as 409
+                 throw new \Exception('El viaje ya fue tomado por otro conductor.', 409);
+            }
+
+            // 3. Assign Driver
+            $this->tripRepo->update($trip, [
+                'driver_id' => $driver->id,
+                'state_id' => State::ACCEPTED,
+            ]);
+
+            $trip->load(['passenger', 'driver', 'state']);
+
+            // 4. Broadcast that trip is taken
+            broadcast(new \App\Events\TripTaken($trip))->toOthers();
+
+            return $this->formatTripResponse($trip);
+        });
+    }
+
+    /**
+     * Deprecated method kept for compatibility if needed, but redirects to new logic if possible
+     * or acts as simple wrapper.Ideally should be removed or updated.
      */
     public function acceptTrip(Trip $trip, User $driver)
     {
-        if ($trip->state_id !== State::REQUESTED) {
-            throw new \Exception('La carrera no está disponible');
-        }
-
-        $trip = $this->tripRepo->update($trip, [
-            'driver_id' => $driver->id,
-            'state_id' => State::ACCEPTED,
-        ]);
-
-        $trip->load(['passenger', 'driver', 'state']);
-        return $this->formatTripResponse($trip);
+       return $this->acceptTripById($trip->id, $driver);
     }
 
     /**
