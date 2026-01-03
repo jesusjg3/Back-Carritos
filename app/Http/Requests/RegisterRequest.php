@@ -18,7 +18,7 @@ class RegisterRequest extends FormRequest
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string|min:8',
-            'role_id' => 'required|integer|exists:rols,id',
+            'role_id' => 'required|integer|in:2',
         ];
     }
 
@@ -38,7 +38,7 @@ class RegisterRequest extends FormRequest
             'password_confirmation.min' => 'La confirmación de contraseña debe tener al menos 8 caracteres.',
             'role_id.required' => 'El rol es obligatorio.',
             'role_id.integer' => 'El rol debe ser numérico.',
-            'role_id.exists' => 'El rol seleccionado no es válido.',
+            'role_id.in' => 'Solo se permite el registro como pasajero.',
         ];
     }
 

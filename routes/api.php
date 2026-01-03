@@ -10,7 +10,6 @@ use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 
 // Public
-Route::get('/roles', [RolController::class, 'index']);
 Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
