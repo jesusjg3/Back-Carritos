@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Services\AuthService;
+use App\Repositories\UserRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
     protected AuthService $authService;
+    protected UserRepository $userRepo;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, UserRepository $userRepo)
     {
         $this->authService = $authService;
+        $this->userRepo = $userRepo;
     }
 
     public function register(RegisterRequest $request): JsonResponse
@@ -66,7 +69,7 @@ class AuthController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = \App\Models\User::where('email', $request->input('email'))->first();
+        $user = $this->userRepo->findByEmail($request->input('email'));
 
         return response()->json([
             'available' => is_null($user),
