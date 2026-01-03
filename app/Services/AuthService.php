@@ -37,8 +37,6 @@ class AuthService
 
     public function register(array $data)
     {
-        DB::beginTransaction();
-
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -46,8 +44,6 @@ class AuthService
             'rol_id' => $data['role_id'],
             'is_active' => true,
         ]);
-
-        DB::commit();
 
         $token = auth('api')->login($user);
 
