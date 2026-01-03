@@ -36,7 +36,7 @@ class UserRepository
 
     public function find($id)
     {
-        return User::findOrFail($id);
+        return User::with('rol')->findOrFail($id);
     }
 
     public function findByEmail($email)
@@ -69,7 +69,7 @@ class UserRepository
 
     public function toggleStatus($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::with('rol')->findOrFail($id);
         $user->is_active = !$user->is_active;
         $user->save();
         return $user;

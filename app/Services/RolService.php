@@ -15,12 +15,12 @@ class RolService
 
     public function getAllRoles()
     {
-        return $this->rolRepository->getAll();
+        return $this->rolRepository->all();
     }
 
     public function getRolById(int $id)
     {
-        return $this->rolRepository->findById($id);
+        return $this->rolRepository->find($id);
     }
 
     public function createRol(array $data)

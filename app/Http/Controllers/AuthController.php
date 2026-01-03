@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Services\AuthService;
+use App\Repositories\UserRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
     protected AuthService $authService;
+    protected UserRepository $userRepo;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, UserRepository $userRepo)
     {
         $this->authService = $authService;
+        $this->userRepo = $userRepo;
     }
 
     public function register(RegisterRequest $request): JsonResponse
@@ -48,6 +51,27 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function me(): JsonResponse
+    {
+        try {
+            $user = $this->authService->me();
+            return response()->json($user);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+    }
+
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $result = $this->authService->checkEmailAvailability($request->input('email'));
+
+        return response()->json($result);
     }
 
     // Admin Methods
