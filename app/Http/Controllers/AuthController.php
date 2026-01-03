@@ -56,7 +56,7 @@ class AuthController extends Controller
     public function me(): JsonResponse
     {
         try {
-            $user = $this->authService->getCurrentUser();
+            $user = $this->authService->me();
             return response()->json($user);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 401);
@@ -69,12 +69,9 @@ class AuthController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = $this->userRepo->findByEmail($request->input('email'));
+        $result = $this->authService->checkEmailAvailability($request->input('email'));
 
-        return response()->json([
-            'available' => is_null($user),
-            'message' => is_null($user) ? 'El correo está disponible' : 'El correo ya está registrado',
-        ]);
+        return response()->json($result);
     }
 
     // Admin Methods

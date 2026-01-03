@@ -116,7 +116,7 @@ class AuthService
         return $this->userRepo->toggleStatus($id);
     }
 
-    public function getCurrentUser()
+    public function me()
     {
         $user = auth('api')->user();
 
@@ -137,6 +137,16 @@ class AuthService
             'is_active' => $user->is_active,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
+        ];
+    }
+
+    public function checkEmailAvailability(string $email)
+    {
+        $user = $this->userRepo->findByEmail($email);
+
+        return [
+            'available' => is_null($user),
+            'message' => is_null($user) ? 'El correo está disponible' : 'El correo ya está registrado',
         ];
     }
 }
