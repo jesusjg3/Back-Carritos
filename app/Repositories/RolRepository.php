@@ -6,9 +6,19 @@ use App\Models\Rol;
 
 class RolRepository
 {
+    public function all()
+    {
+        return Rol::all();
+    }
+
     public function getAll()
     {
         return Rol::all();
+    }
+
+    public function find(int $id)
+    {
+        return Rol::find($id);
     }
 
     public function findById(int $id)
@@ -18,9 +28,8 @@ class RolRepository
 
     public function findByName(string $name)
     {
-        return Rol::where('rol_name', $name)->firstOrFail();
+        return Rol::where('rol_name', $name)->first();
     }
-
 
     public function create(array $data)
     {

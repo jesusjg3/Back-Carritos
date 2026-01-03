@@ -10,43 +10,52 @@ use App\Http\Controllers\TripPositionController;
 use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:api');
+// ============ Public Routes (No authentication required) ============
+// Obtener roles disponibles
+Route::get('/roles', [AuthController::class, 'getRoles']);
 
 // Auth Public Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
 
-// Logout (Protected by auth but allowing inactive users to logout)
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
+// Verificar disponibilidad de email
+Route::post('/check-email', [AuthController::class, 'checkEmail']);
 
-// Rutas protegidas por autenticación y usuario activo
-Route::middleware(['auth:api', 'is_active'])->group(function () {
+// ============ Protected Routes (Requires authentication) ============
+Route::middleware('auth:api')->group(function () {
+    // Get current user info
+    Route::get('/me', [AuthController::class, 'me']);
 
-    // Admin Users Management
-    Route::get('/users', [AuthController::class, 'listUsers']);
-    Route::post('/users/drivers', [AuthController::class, 'storeDriver']);
-    Route::patch('/users/{id}/toggle-status', [AuthController::class, 'toggleStatus']);
+    // Logout
+    Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Roles
-    Route::apiResource('rols', RolController::class);
+    // Rutas protegidas por usuario activo
+    Route::middleware('is_active')->group(function () {
 
-    // States
-    Route::apiResource('states', StateController::class);
+        // Admin Users Management
+        Route::get('/users', [AuthController::class, 'listUsers']);
+        Route::post('/users/drivers', [AuthController::class, 'storeDriver']);
+        Route::patch('/users/{id}/toggle-status', [AuthController::class, 'toggleStatus']);
 
-    // Tabs
-    Route::apiResource('tabs', TabsController::class);
+        // Roles
+        Route::apiResource('rols', RolController::class);
 
-    // Trips
-    Route::post('/trips/request', [TripController::class, 'request']);
-    Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
-    Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
+        // States
+        Route::apiResource('states', StateController::class);
 
-    // Trip Positions
-    Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
+        // Tabs
+        Route::apiResource('tabs', TabsController::class);
 
-    // Trip Ratings
-    Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
+        // Trips
+        Route::post('/trips/request', [TripController::class, 'request']);
+        Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
+        Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
+
+        // Trip Positions
+        Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
+
+        // Trip Ratings
+        Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
+    });
 });
 
