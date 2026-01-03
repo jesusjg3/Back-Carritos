@@ -6,21 +6,20 @@ use App\Models\Rol;
 
 class RolRepository
 {
-    public function getAll()
+    public function all()
     {
         return Rol::all();
     }
 
-    public function findById(int $id)
+    public function find(int $id)
     {
-        return Rol::findOrFail($id);
+        return Rol::find($id);
     }
 
     public function findByName(string $name)
     {
-        return Rol::where('rol_name', $name)->firstOrFail();
+        return Rol::where('rol_name', $name)->first();
     }
-
 
     public function create(array $data)
     {

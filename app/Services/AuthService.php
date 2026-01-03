@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
 use Illuminate\Support\Facades\DB;
@@ -20,44 +19,70 @@ class AuthService
 
     public function login(string $email, string $password)
     {
-        if (!$token = auth()->attempt(['email' => $email, 'password' => $password])) {
-            throw new \Exception('Invalid credentials');
+        $credentials = ['email' => $email, 'password' => $password];
+
+        if (!$token = auth('api')->attempt($credentials)) {
+            throw new \Exception('Las credenciales proporcionadas son inválidas.');
         }
 
-        return $this->respondWithToken($token);
+        $user = auth('api')->user();
+
+        if (!$user->is_active) {
+            auth('api')->logout();
+            throw new \Exception('Su cuenta ha sido desactivada.');
+        }
+
+        return $this->respondWithToken($token, $user);
     }
 
     public function register(array $data)
     {
+        DB::beginTransaction();
+
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $data['password'],
             'rol_id' => $data['role_id'],
+            'is_active' => true,
         ]);
 
-        $token = auth()->login($user);
+        DB::commit();
 
-        return $this->respondWithToken($token);
+        $token = auth('api')->login($user);
+
+        return $this->respondWithToken($token, $user);
     }
-
 
     public function logout()
     {
-        auth()->logout();
+        auth('api')->logout();
         return true;
     }
 
-    protected function respondWithToken($token)
+    protected function respondWithToken($token, $user = null)
     {
+        $user = $user ?? auth('api')->user();
+
+        if ($user && !$user->relationLoaded('rol')) {
+            $user = $this->userRepo->find($user->id);
+        }
+
         return [
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
+            'expires_in' => auth('api')->factory()->getTTL() * 60,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->rol->rol_name ?? null,
+                'role_id' => $user->rol_id,
+                'is_active' => $user->is_active,
+            ],
         ];
     }
 
-    // Admin Features
     public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive)
     {
         return $this->userRepo->paginate($perPage, $search, $roleId, $isActive);
@@ -65,21 +90,54 @@ class AuthService
 
     public function createDriver(array $data)
     {
-        // Find conductor role ID
         $driverRole = $this->rolRepo->findByName('conductor');
 
-        return $this->userRepo->create([
+        if (!$driverRole) {
+            throw new \Exception('El rol de conductor no existe.');
+        }
+
+        if ($this->userRepo->findByEmail($data['email'])) {
+            throw new \Exception('El correo electrónico ya está registrado.');
+        }
+
+        $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $data['password'],
             'rol_id' => $driverRole->id,
             'is_active' => true,
         ]);
+
+        return $this->userRepo->find($user->id);
     }
 
     public function toggleUserStatus(int $id)
     {
         return $this->userRepo->toggleStatus($id);
+    }
+
+    public function getCurrentUser()
+    {
+        $user = auth('api')->user();
+
+        if (!$user) {
+            throw new \Exception('Usuario no autenticado.');
+        }
+
+        if (!$user->relationLoaded('rol')) {
+            $user = $this->userRepo->find($user->id);
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->rol->rol_name ?? null,
+            'role_id' => $user->rol_id,
+            'is_active' => $user->is_active,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+        ];
     }
 }
 
