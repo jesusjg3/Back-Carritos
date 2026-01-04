@@ -145,6 +145,14 @@ class AuthService
             'message' => is_null($user) ? 'El correo está disponible' : 'El correo ya está registrado',
         ];
     }
+
+    public function refresh()
+    {
+        $token = auth('api')->refresh();
+        $user = auth('api')->user();
+
+        return $this->respondWithToken($token, $user);
+    }
 }
 
 

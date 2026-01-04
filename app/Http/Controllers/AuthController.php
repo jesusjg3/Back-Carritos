@@ -63,6 +63,16 @@ class AuthController extends Controller
         }
     }
 
+    public function refresh(): JsonResponse
+    {
+        try {
+            $result = $this->authService->refresh();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+    }
+
     public function checkEmail(Request $request): JsonResponse
     {
         $request->validate([
