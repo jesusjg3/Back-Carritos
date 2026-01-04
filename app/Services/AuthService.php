@@ -112,6 +112,54 @@ class AuthService
         return $this->userRepo->toggleStatus($id);
     }
 
+    public function updateUser(int $id, array $data)
+    {
+        $user = $this->userRepo->find($id);
+
+        // Validar que el nuevo email no esté registrado (excepto si es del mismo usuario)
+        if (isset($data['email']) && $data['email'] !== $user->email) {
+            $existingUser = $this->userRepo->findByEmail($data['email']);
+            if ($existingUser) {
+                throw new \Exception('El correo electrónico ya está registrado.');
+            }
+        }
+
+        // Si se proporciona un rol_id, validar que exista
+        if (isset($data['rol_id'])) {
+            $rol = $this->rolRepo->find($data['rol_id']);
+            if (!$rol) {
+                throw new \Exception('El rol especificado no existe.');
+            }
+        }
+
+        // Actualizar solo los campos permitidos
+        $allowedFields = ['name', 'email', 'rol_id'];
+        $updateData = array_intersect_key($data, array_flip($allowedFields));
+
+        $updatedUser = $this->userRepo->update($id, $updateData);
+        
+        return [
+            'id' => $updatedUser->id,
+            'name' => $updatedUser->name,
+            'email' => $updatedUser->email,
+            'role' => $updatedUser->rol->rol_name ?? null,
+            'role_id' => $updatedUser->rol_id,
+            'is_active' => $updatedUser->is_active,
+        ];
+    }
+
+    public function deleteUser(int $id)
+    {
+        // No permitir eliminar el usuario actual
+        $currentUser = auth('api')->user();
+        if ($currentUser && $currentUser->id === $id) {
+            throw new \Exception('No puedes eliminar tu propia cuenta.');
+        }
+
+        $this->userRepo->delete($id);
+        return true;
+    }
+
     public function me()
     {
         $user = auth('api')->user();

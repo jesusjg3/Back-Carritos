@@ -116,6 +116,37 @@ class AuthController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
+
+    public function updateUser(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
+            'rol_id' => 'sometimes|integer|exists:rols,id',
+        ]);
+
+        try {
+            $user = $this->authService->updateUser($id, $validated);
+            return response()->json([
+                'message' => 'Usuario actualizado correctamente',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function deleteUser(int $id): JsonResponse
+    {
+        try {
+            $this->authService->deleteUser($id);
+            return response()->json([
+                'message' => 'Usuario eliminado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
 }
 
 
