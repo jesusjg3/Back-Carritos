@@ -118,8 +118,8 @@ class AuthService
 
         // Validar que el nuevo email no esté registrado (excepto si es del mismo usuario)
         if (isset($data['email']) && $data['email'] !== $user->email) {
-            $existingUser = $this->userRepo->findByEmail($data['email']);
-            if ($existingUser) {
+            $emailCheck = $this->checkEmailAvailability($data['email']);
+            if (!$emailCheck['available']) {
                 throw new \Exception('El correo electrónico ya está registrado.');
             }
         }
