@@ -24,6 +24,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/users', [AuthController::class, 'listUsers']);
         Route::post('/users/drivers', [AuthController::class, 'storeDriver']);
         Route::patch('/users/{id}/toggle-status', [AuthController::class, 'toggleStatus']);
+        Route::put('/users/{id}', [AuthController::class, 'updateUser']);
+        Route::delete('/users/{id}', [AuthController::class, 'deleteUser']);
 
         Route::apiResource('rols', RolController::class);
         Route::apiResource('states', StateController::class);
