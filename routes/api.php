@@ -4,12 +4,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\TabsController;
+use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\TripPositionController;
 use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 
 // Public
+Route::get('/destinations', [DestinationController::class, 'index']);
+Route::get('/destinations/{id}', [DestinationController::class, 'show']);
 Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -30,6 +33,10 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('rols', RolController::class);
         Route::apiResource('states', StateController::class);
         Route::apiResource('tabs', TabsController::class);
+        Route::post('/destinations', [DestinationController::class, 'store']);
+        Route::put('/destinations/{id}', [DestinationController::class, 'update']);
+        Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
+        Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
 
         Route::post('/trips/request', [TripController::class, 'request']);
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
