@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         $pasajeroRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
         $conductorRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@test.com'],
             [
                 'name' => 'Admin User',
@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'pasajero@test.com'],
             [
                 'name' => 'Pasajero User',
@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'conductor@test.com'],
             [
                 'name' => 'Conductor User',
