@@ -28,26 +28,35 @@ class DatabaseSeeder extends Seeder
         $pasajeroRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
         $conductorRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
 
-        User::factory()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@test.com',
-            'password' => bcrypt('12345678'),
-            'rol_id' => $adminRole->id ?? 1,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@test.com'],
+            [
+                'name' => 'Admin User',
+                'password' => bcrypt('12345678'),
+                'rol_id' => $adminRole->id ?? 1,
+                'email_verified_at' => now(),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Pasajero User',
-            'email' => 'pasajero@test.com',
-            'password' => bcrypt('12345678'),
-            'rol_id' => $pasajeroRole->id ?? 2,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'pasajero@test.com'],
+            [
+                'name' => 'Pasajero User',
+                'password' => bcrypt('12345678'),
+                'rol_id' => $pasajeroRole->id ?? 2,
+                'email_verified_at' => now(),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Conductor User',
-            'email' => 'conductor@test.com',
-            'password' => bcrypt('12345678'),
-            'rol_id' => $conductorRole->id ?? 3,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'conductor@test.com'],
+            [
+                'name' => 'Conductor User',
+                'password' => bcrypt('12345678'),
+                'rol_id' => $conductorRole->id ?? 3,
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }
 
