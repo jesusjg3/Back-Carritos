@@ -16,8 +16,10 @@ class StoreTripRequest extends FormRequest
         return [
             'origin_lat' => 'required|numeric|between:-90,90',
             'origin_lng' => 'required|numeric|between:-180,180',
+            'origin_address' => 'required|string|max:255',
             'destination_lat' => 'required|numeric|between:-90,90',
             'destination_lng' => 'required|numeric|between:-180,180',
+            'destination_address' => 'required|string|max:255',
             'distance' => 'required|numeric|min:0',
         ];
     }

@@ -18,8 +18,8 @@ class StateSeeder extends Seeder
         // const FINISHED = 3;
 
         State::firstOrCreate(['id' => 1], ['state_name' => 'SOLICITADO']);
-        State::firstOrCreate(['id' => 2], ['state_name' => 'ACEPTADO']);
-        State::firstOrCreate(['id' => 3], ['state_name' => 'FINALIZADO']);
+        State::firstOrCreate(['id' => 2], ['state_name' => 'EN VIAJE']);
+        State::firstOrCreate(['id' => 3], ['state_name' => 'TERMINADO']);
 
         // You can add more states if needed, e.g. CANCELADO
         State::firstOrCreate(['id' => 4], ['state_name' => 'CANCELADO']);

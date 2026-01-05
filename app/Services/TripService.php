@@ -42,7 +42,7 @@ class TripService
             $trip->load(['passenger', 'driver', 'state']);
 
             // Broadcast event to drivers
-            broadcast(new \App\Events\NewTripRequest($trip))->toOthers();
+            broadcast(new \App\Events\NewTripRequest($trip));
 
             return $this->formatTripResponse($trip);
         });
@@ -60,7 +60,7 @@ class TripService
             // 2. Critical Validation
             if ($trip->state_id !== State::REQUESTED || $trip->driver_id !== null) {
                 // Return a specific structure or throw an exception that Controller catches as 409
-                 throw new \Exception('El viaje ya fue tomado por otro conductor.', 409);
+                throw new \Exception('El viaje ya fue tomado por otro conductor.', 409);
             }
 
             // 3. Assign Driver
@@ -72,7 +72,7 @@ class TripService
             $trip->load(['passenger', 'driver', 'state']);
 
             // 4. Broadcast that trip is taken
-            broadcast(new \App\Events\TripTaken($trip))->toOthers();
+            broadcast(new \App\Events\TripTaken($trip));
 
             return $this->formatTripResponse($trip);
         });
@@ -84,7 +84,7 @@ class TripService
      */
     public function acceptTrip(Trip $trip, User $driver)
     {
-       return $this->acceptTripById($trip->id, $driver);
+        return $this->acceptTripById($trip->id, $driver);
     }
 
     /**
@@ -106,8 +106,10 @@ class TripService
             'id' => $trip->id,
             'origin_lat' => $trip->origin_lat,
             'origin_lng' => $trip->origin_lng,
+            'origin_address' => $trip->origin_address,
             'destination_lat' => $trip->destination_lat,
             'destination_lng' => $trip->destination_lng,
+            'destination_address' => $trip->destination_address,
             'distance' => $trip->distance,
             'state' => $trip->state ? [
                 'id' => $trip->state->id,

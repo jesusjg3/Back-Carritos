@@ -21,21 +21,30 @@ class NewTripRequest implements ShouldBroadcast
         $this->trip = $trip;
     }
 
-    public function broadcastOn()
-    {
-         // Assuming a simple 'drivers' channel for now, as user didn't specify zone logic yet.
-         // In production this should probably be specific to a city or zone.
-        return new PrivateChannel('drivers');
-    }
-
     public function broadcastWith()
     {
         return [
             'id' => $this->trip->id,
             'origin_lat' => $this->trip->origin_lat,
             'origin_lng' => $this->trip->origin_lng,
+            'origin_address' => $this->trip->origin_address,
+            'destination_lat' => $this->trip->destination_lat,
+            'destination_lng' => $this->trip->destination_lng,
+            'destination_address' => $this->trip->destination_address,
             'distance' => $this->trip->distance,
             'created_at' => $this->trip->created_at,
         ];
+    }
+
+    public function broadcastOn()
+    {
+        // Assuming a simple 'drivers' channel for now, as user didn't specify zone logic yet.
+        // In production this should probably be specific to a city or zone.
+        return new PrivateChannel('drivers');
+    }
+
+    public function broadcastAs()
+    {
+        return 'NewTripRequest';
     }
 }

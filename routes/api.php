@@ -45,4 +45,12 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
     });
 });
-
+// Test Route to force broadcast
+Route::post('/test-broadcast/{id}', function ($id) {
+    echo "Broadcasting TripTaken for Trip $id...";
+    $trip = \App\Models\Trip::find($id);
+    if (!$trip)
+        return response()->json(['error' => 'Trip not found'], 404);
+    broadcast(new \App\Events\TripTaken($trip));
+    return response()->json(['message' => 'Broadcast sent']);
+});
