@@ -71,8 +71,11 @@ class TripService
 
             $trip->load(['passenger', 'driver', 'state']);
 
-            // 4. Broadcast that trip is taken
+            // 4. Broadcast that trip is taken to drivers (remove from list)
             broadcast(new \App\Events\TripTaken($trip));
+
+            // 5. Broadcast to specific passenger that trip is accepted
+            broadcast(new \App\Events\TripAccepted($trip));
 
             return $this->formatTripResponse($trip);
         });
@@ -88,6 +91,33 @@ class TripService
     }
 
     /**
+     * Iniciar carrera (Recoger al pasajero)
+     */
+    public function startTrip(Trip $trip)
+    {
+        // Idempotency: If already started, just return the trip
+        if ($trip->state_id === State::STARTED) {
+            $trip->load(['passenger', 'driver', 'state']);
+            return $this->formatTripResponse($trip);
+        }
+
+        if ($trip->state_id !== State::ACCEPTED) {
+            throw new \Exception('El viaje debe estar aceptado para iniciarse.', 400);
+        }
+
+        $trip = $this->tripRepo->update($trip, [
+            'state_id' => State::STARTED,
+        ]);
+
+        $trip->load(['passenger', 'driver', 'state']);
+
+        // Broadcast to passenger
+        broadcast(new \App\Events\TripStarted($trip));
+
+        return $this->formatTripResponse($trip);
+    }
+
+    /**
      * Finalizar carrera
      */
     public function finishTrip(Trip $trip)
@@ -97,6 +127,10 @@ class TripService
         ]);
 
         $trip->load(['passenger', 'driver', 'state']);
+
+        // Broadcast to passenger
+        broadcast(new \App\Events\TripFinished($trip));
+
         return $this->formatTripResponse($trip);
     }
 
@@ -111,6 +145,7 @@ class TripService
             'destination_lng' => $trip->destination_lng,
             'destination_address' => $trip->destination_address,
             'distance' => $trip->distance,
+            'state_id' => $trip->state_id, // Added for frontend compatibility
             'state' => $trip->state ? [
                 'id' => $trip->state->id,
                 'name' => $trip->state->state_name

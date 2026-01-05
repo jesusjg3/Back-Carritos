@@ -40,6 +40,7 @@ Route::middleware('auth:api')->group(function () {
 
         Route::post('/trips/request', [TripController::class, 'request']);
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
+        Route::post('/trips/{id}/start', [TripController::class, 'start']);
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
@@ -53,4 +54,14 @@ Route::post('/test-broadcast/{id}', function ($id) {
         return response()->json(['error' => 'Trip not found'], 404);
     broadcast(new \App\Events\TripTaken($trip));
     return response()->json(['message' => 'Broadcast sent']);
+});
+
+Route::post('/test-broadcast-started/{id}', function ($id) {
+    $trip = \App\Models\Trip::find($id);
+    if (!$trip)
+        return response()->json(['error' => 'Trip not found'], 404);
+
+    // Force state for payload correctness simulation if needed, or just broadcast
+    broadcast(new \App\Events\TripStarted($trip));
+    return response()->json(['message' => 'TripStarted Broadcast sent']);
 });

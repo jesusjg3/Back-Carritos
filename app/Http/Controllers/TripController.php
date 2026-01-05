@@ -46,6 +46,22 @@ class TripController extends Controller
     }
 
     /**
+     * Start a Trip (Driver picked up passenger).
+     */
+    public function start(int $id): JsonResponse
+    {
+        $trip = Trip::findOrFail($id);
+
+        try {
+            $updatedTrip = $this->tripService->startTrip($trip);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = $e->getCode() === 400 ? 400 : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    /**
      * Finish a Trip (Driver/System).
      */
     public function finish(int $id): JsonResponse
