@@ -5,11 +5,11 @@ namespace App\Events;
 use App\Models\Trip;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TripTaken implements ShouldBroadcast
+class TripTaken implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -31,5 +31,9 @@ class TripTaken implements ShouldBroadcast
             'id' => $this->trip->id,
             'driver_id' => $this->trip->driver_id,
         ];
+    }
+    public function broadcastAs()
+    {
+        return 'TripTaken';
     }
 }

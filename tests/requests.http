@@ -1,0 +1,74 @@
+@baseUrl = http://127.0.0.1:8000/api
+@email = pasajero@test.com
+@password = 12345678
+
+# 1. Login to get Token
+# @name login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}"
+}
+
+###
+
+@token = {{login.response.body.access_token}}
+
+# 2. Request a Trip (Trip 1)
+POST {{baseUrl}}/trips/request
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+    "origin_lat": -0.9678,
+    "origin_lng": -80.7126,
+    "origin_address": "Bibliteba Central",
+    "destination_lat": -0.9650,
+    "destination_lng": -80.7100,
+    "destination_address": "Facultad de Ingeniería",
+    "distance": 0.5
+}
+
+###
+
+# 3. Request another Trip (Trip 2)
+POST {{baseUrl}}/trips/request
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+    "origin_lat": -0.9500,
+    "origin_lng": -80.7200,
+    "origin_address": "Mall del Pacífico",
+    "destination_lat": -0.9550,
+    "destination_lng": -80.7250,
+    "destination_address": "Playa Murciélago",
+    "distance": 1.2
+}
+
+###
+
+# 4. Login as Driver
+# @name loginDriver
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "conductor@test.com",
+    "password": "12345678"
+}
+
+###
+
+@driverToken = {{loginDriver.response.body.access_token}}
+
+# 5. Accept Trip (Simulate another driver)
+# @prompt tripId The ID of the trip to accept (check the response from step 2 or 3)
+POST {{baseUrl}}/trips/{{tripId}}/accept
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+###

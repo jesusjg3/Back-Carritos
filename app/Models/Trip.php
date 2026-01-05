@@ -12,8 +12,10 @@ class Trip extends Model
         'state_id',
         'origin_lat',
         'origin_lng',
+        'origin_address',
         'destination_lat',
         'destination_lng',
+        'destination_address',
         'distance',
     ];
 
