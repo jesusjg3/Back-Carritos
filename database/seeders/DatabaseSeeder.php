@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             RolSeeder::class,
             StateSeeder::class,
             TabSeeder::class,
+            DestinationSeeder::class,
         ]);
 
         $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();

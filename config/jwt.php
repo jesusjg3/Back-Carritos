@@ -91,7 +91,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Specify the length of time (in minutes) that the token will be valid for.
-    | Defaults to 1 hour.
+    | Defaults to 90 days for mobile app persistence.
     |
     | You can also set this to null, to yield a never expiring token.
     | Some people may want this behaviour for e.g. a mobile app.
@@ -101,7 +101,7 @@ return [
     |
     */
 
-    'ttl' => (int) env('JWT_TTL', 60),
+    'ttl' => (int) env('JWT_TTL', 129600),
 
     /*
     |--------------------------------------------------------------------------
