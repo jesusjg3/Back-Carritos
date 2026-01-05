@@ -8,3 +8,7 @@ Broadcast::channel('drivers', function ($user) {
     // In production, use $user->hasRole('driver') or similar.
     return true;
 });
+
+Broadcast::channel('passenger.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});

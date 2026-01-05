@@ -72,3 +72,17 @@ POST {{baseUrl}}/trips/{{tripId}}/accept
 Authorization: Bearer {{driverToken}}
 Content-Type: application/json
 ###
+###
+# Conductor inicia viaje (Recogió al pasajero)
+# @prompt tripId ID del viaje a iniciar
+POST {{baseUrl}}/trips/{{tripId}}/start
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+Accept: application/json
+####
+# 6. Conductor finaliza viaje (Entregó al pasajero)
+# @prompt tripId ID del viaje a finalizar
+POST {{baseUrl}}/trips/{{tripId}}/finish
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+Accept: application/json
