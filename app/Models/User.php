@@ -25,6 +25,10 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'rol_id',
         'is_active',
+        'latitude',
+        'longitude',
+        'is_online',
+        'last_location_update',
     ];
 
     /**
@@ -48,6 +52,10 @@ class User extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+            'is_online' => 'boolean',
+            'last_location_update' => 'datetime',
         ];
     }
 
@@ -87,6 +95,37 @@ class User extends Authenticatable implements JWTSubject
             'role' => $this->rol->rol_name ?? null,
             'is_active' => $this->is_active
         ];
+    }
+
+    /**
+     * Scope para obtener solo conductores online
+     */
+    public function scopeOnlineDrivers($query)
+    {
+        return $query->whereHas('rol', function($q) {
+            $q->where('rol_name', 'conductor');
+        })
+        ->where('is_online', true)
+        ->where('is_active', true)
+        ->whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->where('last_location_update', '>=', now()->subMinutes(5));
+    }
+
+    /**
+     * Scope para buscar conductores cercanos usando Haversine
+     */
+    public function scopeNearby($query, $latitude, $longitude, $radiusInKm = 5)
+    {
+        $haversine = "(6371 * acos(cos(radians($latitude)) 
+                    * cos(radians(latitude)) 
+                    * cos(radians(longitude) - radians($longitude)) 
+                    + sin(radians($latitude)) 
+                    * sin(radians(latitude))))";
+
+        return $query->selectRaw("users.*, {$haversine} AS distance")
+                    ->whereRaw("{$haversine} < ?", [$radiusInKm])
+                    ->orderBy('distance');
     }
 }
 

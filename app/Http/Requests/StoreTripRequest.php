@@ -21,6 +21,7 @@ class StoreTripRequest extends FormRequest
             'destination_lng' => 'required|numeric|between:-180,180',
             'destination_address' => 'required|string|max:255',
             'distance' => 'required|numeric|min:0',
+            'passengers_count' => 'required|integer|min:1|max:5',
         ];
     }
 
@@ -42,6 +43,10 @@ class StoreTripRequest extends FormRequest
             'distance.required' => 'La distancia es obligatoria.',
             'distance.numeric' => 'La distancia debe ser un número.',
             'distance.min' => 'La distancia debe ser mayor o igual a 0.',
+            'passengers_count.required' => 'El número de pasajeros es obligatorio.',
+            'passengers_count.integer' => 'El número de pasajeros debe ser un número entero.',
+            'passengers_count.min' => 'Debe haber al menos 1 pasajero.',
+            'passengers_count.max' => 'El máximo de pasajeros es 5.',
         ];
     }
 

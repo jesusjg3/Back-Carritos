@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->decimal('destination_lat', 10, 8);
             $table->decimal('destination_lng', 11, 8);
             $table->decimal('distance', 10, 2);
+            $table->unsignedInteger('passengers_count')->default(1);
+            $table->unsignedInteger('request_attempt')->default(1);
             $table->timestamps();
         });
     }

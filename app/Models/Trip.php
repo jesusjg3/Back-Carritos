@@ -17,6 +17,8 @@ class Trip extends Model
         'destination_lng',
         'destination_address',
         'distance',
+        'passengers_count',
+        'request_attempt',
     ];
 
     public function passenger()
