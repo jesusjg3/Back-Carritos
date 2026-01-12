@@ -115,7 +115,7 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Scope para buscar conductores cercanos usando Haversine
      */
-    public function scopeNearby($query, $latitude, $longitude, $radiusInKm = 5)
+    public function scopeNearby($query, $latitude, $longitude, $radiusInKm = 10)
     {
         $haversine = "(6371 * acos(cos(radians($latitude)) 
                     * cos(radians(latitude)) 
