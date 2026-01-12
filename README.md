@@ -21,35 +21,43 @@ Follow these steps to set up the project locally:
     cd Back-Carritos
     ```
 
-2. **Install PHP Dependencies**
-
-    ```bash
-    composer install
-    ```
-
-3. **Environment Configuration**
+2. **Environment Configuration**
     Copy the example environment file and configure it:
 
     ```bash
     cp .env.example .env
     ```
 
-    Update the `.env` file with your database credentials:
+    Update the `.env` file with your database credentials and Reverb (WebSocket) host.
+    **IMPORTANT:** Set `REVERB_HOST` to your local machine's IP address (e.g., 192.168.x.x) if you are testing with a mobile device or other computers on the network.
 
     ```ini
     DB_CONNECTION=pgsql
     DB_HOST=127.0.0.1
     DB_PORT=5432
-    DB_DATABASE=backphp
+    DB_DATABASE=carritos
     DB_USERNAME=your_username
     DB_PASSWORD=your_password
+
+    # Reverb Configuration (WebSockets)
+    REVERB_HOST=localhost # CHANGE THIS to your local IP
+    REVERB_PORT=8080
+    REVERB_SCHEME=http
+    ```
+
+    **Note:** Make sure to create a PostgreSQL database named `carritos` before running migrations.
+
+3. **Install PHP Dependencies**
+
+    ```bash
+    composer install
     ```
 
 4. **Database Permissions (Important)**
     Ensure your database user has the necessary permissions on the `public` schema. If you encounter permission errors, run:
 
     ```bash
-    sudo -u postgres psql -d <database_name> -c 'GRANT ALL ON SCHEMA public TO <your_username>;'
+    sudo -u postgres psql -d carritos -c 'GRANT ALL ON SCHEMA public TO <your_username>;'
     ```
 
 5. **Generate Application Key**
@@ -83,7 +91,8 @@ Use these accounts to log in after running the seeders:
 
 ## Useful Commands
 
-- **Run Server**: `php artisan serve`
+- **Run Server**: `php artisan serve --host=yourlocalip` (Change to your local IP)
+- **Start Reverb (WebSockets)**: `php artisan reverb:start --host=yourlocalip --port=8080`
 - **Tinker**: `php artisan tinker`
 - **Route List**: `php artisan route:list`
 
