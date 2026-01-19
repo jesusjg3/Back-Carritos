@@ -137,7 +137,7 @@ class AuthService
         $updateData = array_intersect_key($data, array_flip($allowedFields));
 
         $updatedUser = $this->userRepo->update($id, $updateData);
-        
+
         return [
             'id' => $updatedUser->id,
             'name' => $updatedUser->name,

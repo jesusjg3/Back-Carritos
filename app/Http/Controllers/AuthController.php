@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\UpdateDriverLocationRequest;
+use App\Http\Requests\GetNearbyDriversRequest;
 use App\Services\AuthService;
+use App\Services\DriverLocationService;
 use App\Repositories\UserRepository;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -14,11 +17,16 @@ class AuthController extends Controller
 {
     protected AuthService $authService;
     protected UserRepository $userRepo;
+    protected DriverLocationService $locationService;
 
-    public function __construct(AuthService $authService, UserRepository $userRepo)
-    {
+    public function __construct(
+        AuthService $authService,
+        UserRepository $userRepo,
+        DriverLocationService $locationService
+    ) {
         $this->authService = $authService;
         $this->userRepo = $userRepo;
+        $this->locationService = $locationService;
     }
 
     public function register(RegisterRequest $request): JsonResponse
@@ -162,81 +170,51 @@ class AuthController extends Controller
     /**
      * Actualizar la ubicación del conductor
      */
-    public function updateDriverLocation(Request $request): JsonResponse
+    public function updateDriverLocation(UpdateDriverLocationRequest $request): JsonResponse
     {
-        $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-        ]);
-
         try {
             $user = auth()->user();
-            
-            // Verificar que sea conductor
-            if ($user->rol->rol_name !== 'conductor') {
-                return response()->json([
-                    'error' => 'Solo los conductores pueden actualizar su ubicación'
-                ], 403);
-            }
 
-            $user->update([
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'is_online' => true,
-                'last_location_update' => now(),
-            ]);
+            $location = $this->locationService->updateLocation(
+                $user,
+                $request->latitude,
+                $request->longitude
+            );
 
             return response()->json([
                 'message' => 'Ubicación actualizada correctamente',
                 'location' => [
-                    'latitude' => $user->latitude,
-                    'longitude' => $user->longitude,
-                    'updated_at' => $user->last_location_update,
+                    'latitude' => $location->latitude,
+                    'longitude' => $location->longitude,
+                    'updated_at' => $location->last_update,
                 ]
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            $code = $e->getCode();
+            return response()->json(['error' => $e->getMessage()], is_int($code) && $code >= 100 && $code < 600 ? $code : 500);
         }
     }
 
     /**
      * Obtener conductores cercanos
      */
-    public function getNearbyDrivers(Request $request): JsonResponse
+    public function getNearbyDrivers(GetNearbyDriversRequest $request): JsonResponse
     {
-        $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'radius' => 'sometimes|numeric|min:0.1|max:50',
-        ]);
-
         try {
-            $latitude = $request->latitude;
-            $longitude = $request->longitude;
-            $radius = $request->input('radius', 5); // 5 km por defecto
-
-            $drivers = User::onlineDrivers()
-                ->nearby($latitude, $longitude, $radius)
-                ->get()
-                ->map(function($driver) {
-                    return [
-                        'id' => $driver->id,
-                        'name' => $driver->name,
-                        'lat' => (float) $driver->latitude,
-                        'lng' => (float) $driver->longitude,
-                        'distance' => round($driver->distance, 2),
-                        'last_update' => $driver->last_location_update,
-                    ];
-                });
+            $drivers = $this->locationService->getNearbyDrivers(
+                $request->latitude,
+                $request->longitude,
+                $request->input('radius', 5)
+            );
 
             return response()->json([
                 'drivers' => $drivers,
                 'count' => $drivers->count(),
                 'search_center' => [
-                    'latitude' => $latitude,
-                    'longitude' => $longitude,
+                    'latitude' => $request->latitude,
+                    'longitude' => $request->longitude,
                 ],
-                'radius_km' => $radius,
+                'radius_km' => $request->input('radius', 5),
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
