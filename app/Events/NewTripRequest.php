@@ -32,6 +32,7 @@ class NewTripRequest implements ShouldBroadcast
             'destination_lng' => $this->trip->destination_lng,
             'destination_address' => $this->trip->destination_address,
             'distance' => $this->trip->distance,
+            'passengers_count' => $this->trip->passengers_count,
             'created_at' => $this->trip->created_at,
         ];
     }

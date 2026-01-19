@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'is_active' => \App\Http\Middleware\CheckActiveUser::class,
         ]);
+
+        // Configurar CORS para todas las rutas API
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

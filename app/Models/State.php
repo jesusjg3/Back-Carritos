@@ -10,6 +10,7 @@ class State extends Model
     const ACCEPTED = 2;
     const FINISHED = 3;
     const STARTED = 4;
+    const CANCELLED = 5;
 
     protected $fillable = [
         'state_name',

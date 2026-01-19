@@ -145,7 +145,9 @@ class TripService
             'destination_lng' => $trip->destination_lng,
             'destination_address' => $trip->destination_address,
             'distance' => $trip->distance,
-            'state_id' => $trip->state_id, // Added for frontend compatibility
+            'passengers_count' => $trip->passengers_count,
+            'request_attempt' => $trip->request_attempt,
+            'state_id' => $trip->state_id,
             'state' => $trip->state ? [
                 'id' => $trip->state->id,
                 'name' => $trip->state->state_name
