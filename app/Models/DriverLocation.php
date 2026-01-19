@@ -35,8 +35,10 @@ class DriverLocation extends Model
      */
     public function scopeOnline($query)
     {
+        // Considerar online solo si se actualizó en los últimos 30 segundos
+        // Esto evita 'conductores fantasma' cuando se cierra la app
         return $query->where('is_online', true)
-                    ->where('last_update', '>=', now()->subMinutes(5));
+            ->where('last_update', '>=', now()->subSeconds(30));
     }
 
     /**
@@ -52,7 +54,7 @@ class DriverLocation extends Model
                     * sin(radians(latitude))))";
 
         return $query->selectRaw("*, {$haversine} AS distance")
-                    ->whereRaw("{$haversine} < ?", [$radiusInKm])
-                    ->orderBy('distance');
+            ->whereRaw("{$haversine} < ?", [$radiusInKm])
+            ->orderBy('distance');
     }
 }

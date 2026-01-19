@@ -47,6 +47,7 @@ Route::middleware('auth:api')->group(function () {
 
         // Driver location
         Route::post('/driver/location', [AuthController::class, 'updateDriverLocation']);
+        Route::post('/driver/offline', [AuthController::class, 'setDriverOffline']);
         Route::get('/drivers/nearby', [AuthController::class, 'getNearbyDrivers']);
     });
 });

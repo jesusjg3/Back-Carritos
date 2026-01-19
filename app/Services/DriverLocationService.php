@@ -54,4 +54,11 @@ class DriverLocationService
             ];
         });
     }
+    public function setOffline(User $user): void
+    {
+        if ($user->rol->rol_name !== 'conductor') {
+            return; // O lanzar excepción
+        }
+        $this->locationRepo->setOffline($user->id);
+    }
 }

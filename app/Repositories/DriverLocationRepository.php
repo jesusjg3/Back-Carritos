@@ -28,4 +28,9 @@ class DriverLocationRepository
             ->nearby($latitude, $longitude, $radius) // Scope del modelo
             ->get();
     }
+
+    public function setOffline(int $userId): void
+    {
+        DriverLocation::where('user_id', $userId)->update(['is_online' => false]);
+    }
 }
