@@ -220,4 +220,17 @@ class AuthController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    /**
+     * Marcar conductor como offline
+     */
+    public function setDriverOffline(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            $this->locationService->setOffline($user);
+            return response()->json(['message' => 'Status set to offline']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
