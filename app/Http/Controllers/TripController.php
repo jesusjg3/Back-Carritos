@@ -71,4 +71,13 @@ class TripController extends Controller
         $updatedTrip = $this->tripService->finishTrip($trip);
         return response()->json($updatedTrip);
     }
+    /**
+     * Get Trip History for Passenger.
+     */
+    public function history(): JsonResponse
+    {
+        $user = Auth::user();
+        $history = $this->tripService->getTripHistory($user);
+        return response()->json($history);
+    }
 }

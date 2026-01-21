@@ -44,6 +44,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
+        Route::get('/trips/history', [TripController::class, 'history']);
+        Route::get('/ratings', [TripRatingController::class, 'index']);
 
         // Driver location
         Route::post('/driver/location', [AuthController::class, 'updateDriverLocation']);

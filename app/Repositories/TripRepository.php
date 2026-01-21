@@ -36,6 +36,12 @@ class TripRepository
     {
         return $trip->delete();
     }
+    public function getByPassenger(int $passengerId)
+    {
+        return Trip::where('passenger_id', $passengerId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }
 
 

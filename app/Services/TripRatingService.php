@@ -78,6 +78,24 @@ class TripRatingService
             'created_at' => $rating->created_at,
         ];
     }
+
+    public function getRatingsReceived(User $user): array
+    {
+        $ratings = $this->tripRatingRepo->getReceivedOneByUser($user->id);
+
+        return $ratings->map(function ($rating) {
+            return [
+                'id' => $rating->id,
+                'trip_id' => $rating->trip_id,
+                'rating' => $rating->rating,
+                'comment' => $rating->comment,
+                'created_at' => $rating->created_at,
+                'emitter' => $rating->emitter ? [
+                    'name' => $rating->emitter->name,
+                ] : null,
+            ];
+        })->toArray();
+    }
 }
 
 

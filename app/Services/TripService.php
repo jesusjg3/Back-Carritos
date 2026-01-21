@@ -160,6 +160,35 @@ class TripService
             ] : null,
         ];
     }
+
+    public function getTripHistory(User $user)
+    {
+        $trips = $this->tripRepo->getByPassenger($user->id);
+        $trips->load(['driver', 'state']);
+
+        // Eager load only the rating where emitter is the user
+        $trips->load([
+            'ratings' => function ($query) use ($user) {
+                $query->where('emitter_id', $user->id);
+            }
+        ]);
+
+        return $trips->map(function ($trip) {
+            $myRating = $trip->ratings->first();
+            return [
+                'id' => $trip->id,
+                'origin_address' => $trip->origin_address,
+                'destination_address' => $trip->destination_address,
+                'state' => $trip->state ? $trip->state->state_name : 'Unknown',
+                'created_at' => $trip->created_at,
+                'driver' => $trip->driver ? ['name' => $trip->driver->name] : null,
+                'my_rating' => $myRating ? [
+                    'rating' => $myRating->rating,
+                    'comment' => $myRating->comment
+                ] : null
+            ];
+        });
+    }
 }
 
 

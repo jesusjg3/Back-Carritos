@@ -34,6 +34,17 @@ class TripRatingController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
+
+    public function index(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $ratings = $this->ratingService->getRatingsReceived($user);
+            return response()->json($ratings);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
 }
 
 
