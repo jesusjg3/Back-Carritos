@@ -136,17 +136,10 @@ class TripService
 
     private function formatTripResponse(Trip $trip): array
     {
-        // Cargar la ubicación del conductor si existe
+        // Obtener ubicación del conductor desde el repositorio
         $driverLocation = null;
         if ($trip->driver_id) {
-            $driverLocationModel = \App\Models\DriverLocation::where('user_id', $trip->driver_id)->first();
-            if ($driverLocationModel) {
-                $driverLocation = [
-                    'latitude' => (float) $driverLocationModel->latitude,
-                    'longitude' => (float) $driverLocationModel->longitude,
-                    'last_update' => $driverLocationModel->last_update,
-                ];
-            }
+            $driverLocation = $this->tripRepo->getDriverLocation($trip->driver_id);
         }
 
         return [
@@ -169,6 +162,7 @@ class TripService
                 'name' => $trip->passenger->name
             ] : null,
             'driver' => $trip->driver ? [
+                'id' => $trip->driver->id,
                 'name' => $trip->driver->name,
                 // Coordenadas actuales del conductor (si existen)
                 'latitude' => $driverLocation['latitude'] ?? null,
