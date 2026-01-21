@@ -136,6 +136,19 @@ class TripService
 
     private function formatTripResponse(Trip $trip): array
     {
+        // Cargar la ubicación del conductor si existe
+        $driverLocation = null;
+        if ($trip->driver_id) {
+            $driverLocationModel = \App\Models\DriverLocation::where('user_id', $trip->driver_id)->first();
+            if ($driverLocationModel) {
+                $driverLocation = [
+                    'latitude' => (float) $driverLocationModel->latitude,
+                    'longitude' => (float) $driverLocationModel->longitude,
+                    'last_update' => $driverLocationModel->last_update,
+                ];
+            }
+        }
+
         return [
             'id' => $trip->id,
             'origin_lat' => $trip->origin_lat,
@@ -156,7 +169,13 @@ class TripService
                 'name' => $trip->passenger->name
             ] : null,
             'driver' => $trip->driver ? [
-                'name' => $trip->driver->name
+                'name' => $trip->driver->name,
+                // Coordenadas actuales del conductor (si existen)
+                'latitude' => $driverLocation['latitude'] ?? null,
+                'longitude' => $driverLocation['longitude'] ?? null,
+                'last_update' => $driverLocation['last_update'] ?? null,
+                // Estructura completa para compatibilidad
+                'location' => $driverLocation,
             ] : null,
         ];
     }
