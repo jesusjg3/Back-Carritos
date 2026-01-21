@@ -5,6 +5,9 @@ namespace App\Services;
 use App\Repositories\DriverLocationRepository;
 use App\Models\User;
 use App\Models\DriverLocation;
+use App\Models\Trip;
+use App\Models\State;
+use App\Events\DriverLocationUpdated;
 
 class DriverLocationService
 {
@@ -26,12 +29,28 @@ class DriverLocationService
         }
 
         // Delegar al repositorio
-        return $this->locationRepo->updateOrCreateLocation($user->id, [
+        $location = $this->locationRepo->updateOrCreateLocation($user->id, [
             'latitude' => $latitude,
             'longitude' => $longitude,
             'is_online' => true,
             'last_update' => now(),
         ]);
+
+        // Si el conductor tiene un viaje activo (aceptado o iniciado), emitir evento al pasajero
+        $activeTrip = Trip::where('driver_id', $user->id)
+            ->whereIn('state_id', [State::ACCEPTED, State::STARTED])
+            ->first();
+
+        if ($activeTrip) {
+            broadcast(new DriverLocationUpdated(
+                $user->id,
+                $activeTrip->id,
+                $latitude,
+                $longitude
+            ));
+        }
+
+        return $location;
     }
 
     /**
