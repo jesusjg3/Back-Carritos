@@ -64,6 +64,23 @@ class TripRatingService
             'comment' => $comment,
         ]);
 
+        // Recalculate average rating for the receiver
+        $toUser = $this->userRepo->find($toUser->id); // Ensure fresh data
+        $currentScore = $toUser->score ?: 5.0; // Default to 5.0 if null
+        $currentCount = $toUser->rating_count ?: 0;
+
+        // Formula: ((Avg * Count) + NewScore) / (Count + 1)
+        if ($currentCount == 0) {
+            $newScore = (float) $score;
+        } else {
+            $newScore = (($currentScore * $currentCount) + $score) / ($currentCount + 1);
+        }
+
+        $this->userRepo->update($toUser->id, [
+            'score' => round($newScore, 2),
+            'rating_count' => $currentCount + 1
+        ]);
+
         return [
             'id' => $rating->id,
             'trip_id' => $rating->trip_id,

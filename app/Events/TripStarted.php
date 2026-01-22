@@ -40,7 +40,7 @@ class TripStarted implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $this->trip->load(['driver', 'state']);
+        $this->trip->load(['driver.driverLocation', 'state']);
 
         return [
             'trip' => [
@@ -51,6 +51,8 @@ class TripStarted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
+                    'latitude' => $this->trip->driver->driverLocation->latitude ?? null,
+                    'longitude' => $this->trip->driver->driverLocation->longitude ?? null,
                 ] : null,
                 'origin' => [
                     'lat' => $this->trip->origin_lat,

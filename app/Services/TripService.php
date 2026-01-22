@@ -55,7 +55,7 @@ class TripService
     {
         return DB::transaction(function () use ($tripId, $driver) {
             // 1. LOCK the row for update
-            $trip = Trip::where('id', $tripId)->lockForUpdate()->firstOrFail();
+            $trip = $this->tripRepo->findLocked($tripId);
 
             // 2. Critical Validation
             if ($trip->state_id !== State::REQUESTED || $trip->driver_id !== null) {
@@ -134,6 +134,44 @@ class TripService
         return $this->formatTripResponse($trip);
     }
 
+    /**
+     * Cancelar carrera
+     */
+    public function cancelTrip(int $tripId, User $user)
+    {
+        return DB::transaction(function () use ($tripId, $user) {
+            $trip = $this->tripRepo->findLocked($tripId);
+
+            // Allow cancellation if not already finished or cancelled
+            if ($trip->state_id === State::FINISHED || $trip->state_id === State::CANCELLED) {
+                return $this->formatTripResponse($trip); // Already done
+            }
+
+            // If user is passenger, verify ownership
+            if ($user->role === 'pasajero' && $trip->passenger_id !== $user->id) {
+                throw new \Exception('No autorizado para cancelar este viaje.', 403);
+            }
+
+            // If user is driver, verify assignment
+            if ($user->role === 'conductor' && $trip->driver_id !== $user->id) {
+                throw new \Exception('No autorizado para cancelar este viaje.', 403);
+            }
+
+            $currentStatus = $trip->state_id;
+
+            $this->tripRepo->update($trip, [
+                'state_id' => State::CANCELLED,
+            ]);
+
+            $trip->load(['passenger', 'driver', 'state']);
+
+            // Broadcast Cancellation
+            broadcast(new \App\Events\TripCancelled($trip));
+
+            return $this->formatTripResponse($trip);
+        });
+    }
+
     private function formatTripResponse(Trip $trip): array
     {
         // Obtener ubicación del conductor desde el repositorio
@@ -164,6 +202,9 @@ class TripService
             'driver' => $trip->driver ? [
                 'id' => $trip->driver->id,
                 'name' => $trip->driver->name,
+                'rating' => $trip->driver->score ?? 5.0, // Use stored score
+                'score' => $trip->driver->score ?? 5.0,
+                'rating_count' => $trip->driver->rating_count ?? 0,
                 // Coordenadas actuales del conductor (si existen)
                 'latitude' => $driverLocation['latitude'] ?? null,
                 'longitude' => $driverLocation['longitude'] ?? null,
