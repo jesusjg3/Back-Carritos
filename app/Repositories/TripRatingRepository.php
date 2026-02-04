@@ -34,6 +34,13 @@ class TripRatingRepository
         $tripRating = TripRating::findOrFail($id);
         return $tripRating->delete();
     }
+    public function getReceivedOneByUser(int $receiverId)
+    {
+        return TripRating::where('receiver_id', $receiverId)
+            ->with(['emitter'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }
 
 

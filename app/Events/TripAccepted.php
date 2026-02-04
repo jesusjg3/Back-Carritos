@@ -41,7 +41,7 @@ class TripAccepted implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         // Cargar relaciones necesarias para el frontend
-        $this->trip->load(['driver', 'state']);
+        $this->trip->load(['driver.driverLocation', 'state']);
 
         return [
             'trip' => [
@@ -51,6 +51,10 @@ class TripAccepted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
+                    'rating' => $this->trip->driver->score ?? 5.0,
+                    'score' => $this->trip->driver->score ?? 5.0,
+                    'latitude' => $this->trip->driver->driverLocation->latitude ?? null,
+                    'longitude' => $this->trip->driver->driverLocation->longitude ?? null,
                     // Agregar más campos si es necesario (foto, placa, etc.)
                 ] : null,
                 'origin' => [

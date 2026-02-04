@@ -42,8 +42,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
         Route::post('/trips/{id}/start', [TripController::class, 'start']);
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
+        Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
+        Route::get('/trips/history', [TripController::class, 'history']);
+        Route::get('/ratings', [TripRatingController::class, 'index']);
 
         // Driver location
         Route::post('/driver/location', [AuthController::class, 'updateDriverLocation']);

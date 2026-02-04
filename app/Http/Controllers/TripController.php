@@ -71,4 +71,28 @@ class TripController extends Controller
         $updatedTrip = $this->tripService->finishTrip($trip);
         return response()->json($updatedTrip);
     }
+
+    /**
+     * Cancel a Trip.
+     */
+    public function cancel(int $id): JsonResponse
+    {
+        $user = Auth::user();
+        try {
+            $result = $this->tripService->cancelTrip($id, $user);
+            return response()->json($result);
+        } catch (\Exception $e) {
+            $status = $e->getCode() === 403 ? 403 : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+    /**
+     * Get Trip History for Passenger.
+     */
+    public function history(): JsonResponse
+    {
+        $user = Auth::user();
+        $history = $this->tripService->getTripHistory($user);
+        return response()->json($history);
+    }
 }

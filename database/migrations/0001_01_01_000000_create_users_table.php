@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->boolean('is_active')->default(true);
+            $table->decimal('score', 3, 2)->default(5.00)->comment('Rating average');
+            $table->unsignedInteger('rating_count')->default(0)->comment('Total number of ratings received');
             $table->rememberToken();
             $table->timestamps();
         });

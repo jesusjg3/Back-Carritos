@@ -34,6 +34,16 @@ class TripRepository
         return Trip::where('driver_id', $driverId)->get();
     }
 
+    public function getByPassenger(int $passengerId)
+    {
+        return Trip::where('passenger_id', $passengerId)->orderBy('created_at', 'desc')->get();
+    }
+
+    public function findLocked(int $id): Trip
+    {
+        return Trip::where('id', $id)->lockForUpdate()->firstOrFail();
+    }
+
     public function update(Trip $trip, array $data): Trip
     {
         $trip->update($data);

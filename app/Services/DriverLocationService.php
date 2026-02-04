@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\DriverLocation;
 use App\Models\Trip;
 use App\Models\State;
-use App\Events\DriverLocationUpdated;
+use App\Events\TripLocationUpdated;
 
 class DriverLocationService
 {
@@ -42,11 +42,14 @@ class DriverLocationService
             ->first();
 
         if ($activeTrip) {
-            broadcast(new DriverLocationUpdated(
-                $user->id,
+            $status = ($activeTrip->state_id === State::ACCEPTED) ? 'accepted' : 'started';
+
+            broadcast(new TripLocationUpdated(
                 $activeTrip->id,
+                $user->id,
                 $latitude,
-                $longitude
+                $longitude,
+                $status
             ));
         }
 
