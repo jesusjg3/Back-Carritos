@@ -3,18 +3,15 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
-use App\Repositories\RolRepository;
 use Illuminate\Support\Facades\DB;
 
 class AuthService
 {
     protected UserRepository $userRepo;
-    protected RolRepository $rolRepo;
 
-    public function __construct(UserRepository $userRepo, RolRepository $rolRepo)
+    public function __construct(UserRepository $userRepo)
     {
         $this->userRepo = $userRepo;
-        $this->rolRepo = $rolRepo;
     }
 
     public function login(string $email, string $password)
@@ -77,87 +74,6 @@ class AuthService
                 'is_active' => $user->is_active,
             ],
         ];
-    }
-
-    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive)
-    {
-        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive);
-    }
-
-    public function createDriver(array $data)
-    {
-        $driverRole = $this->rolRepo->findByName('conductor');
-
-        if (!$driverRole) {
-            throw new \Exception('El rol de conductor no existe.');
-        }
-
-        if ($this->userRepo->findByEmail($data['email'])) {
-            throw new \Exception('El correo electrónico ya está registrado.');
-        }
-
-        $user = $this->userRepo->create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => $data['password'],
-            'rol_id' => $driverRole->id,
-            'is_active' => true,
-        ]);
-
-        return $this->userRepo->find($user->id);
-    }
-
-    public function toggleUserStatus(int $id)
-    {
-        return $this->userRepo->toggleStatus($id);
-    }
-
-    public function updateUser(int $id, array $data)
-    {
-        $user = $this->userRepo->find($id);
-
-        // Validar que el nuevo email no esté registrado (excepto si es del mismo usuario)
-        if (isset($data['email']) && $data['email'] !== $user->email) {
-            $emailCheck = $this->checkEmailAvailability($data['email']);
-            if (!$emailCheck['available']) {
-                throw new \Exception('El correo electrónico ya está registrado.');
-            }
-        }
-
-        // Si se proporciona un rol_id, validar que exista
-        if (isset($data['rol_id'])) {
-            $rol = $this->rolRepo->find($data['rol_id']);
-            if (!$rol) {
-                throw new \Exception('El rol especificado no existe.');
-            }
-        }
-
-        // Actualizar solo los campos permitidos
-        $allowedFields = ['name', 'email', 'rol_id'];
-        $updateData = array_intersect_key($data, array_flip($allowedFields));
-
-        $updatedUser = $this->userRepo->update($id, $updateData);
-
-        return [
-            'id' => $updatedUser->id,
-            'name' => $updatedUser->name,
-            'email' => $updatedUser->email,
-            'role' => $updatedUser->rol->rol_name ?? null,
-            'role_id' => $updatedUser->rol_id,
-            'is_active' => $updatedUser->is_active,
-        ];
-    }
-
-    public function deleteUser(int $id)
-    {
-        // No permitir eliminar el usuario actual
-        $currentUser = auth('api')->user();
-        if ($currentUser && $currentUser->id === $id) {
-            throw new \Exception('No puedes eliminar tu propia cuenta.');
-        }
-
-        $this->userRepo->delete($id);
-        return true;
     }
 
     public function me()

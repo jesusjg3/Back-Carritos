@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'is_active' => \App\Http\Middleware\CheckActiveUser::class,
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
         // Configurar CORS para todas las rutas API

@@ -51,9 +51,10 @@ class TripController extends Controller
     public function start(int $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
+        $user = Auth::user();
 
         try {
-            $updatedTrip = $this->tripService->startTrip($trip);
+            $updatedTrip = $this->tripService->startTrip($trip, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
             $status = $e->getCode() === 400 ? 400 : 500;
@@ -67,9 +68,15 @@ class TripController extends Controller
     public function finish(int $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
+        $user = Auth::user();
 
-        $updatedTrip = $this->tripService->finishTrip($trip);
-        return response()->json($updatedTrip);
+        try {
+            $updatedTrip = $this->tripService->finishTrip($trip, $user);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = $e->getCode() === 403 ? 403 : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
     }
 
     /**

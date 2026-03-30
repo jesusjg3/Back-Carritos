@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+    public function listUsers(Request $request): JsonResponse
+    {
+        $perPage = $request->integer('per_page', 10);
+        $search = $request->query('search');
+        $roleId = $request->query('role_id');
+        $isActive = $request->has('is_active') ? $request->boolean('is_active') : null;
+
+        $users = $this->userService->listUsers($perPage, $search, $roleId, $isActive);
+
+        return response()->json($users);
+    }
+
+    public function storeDriver(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+        ]);
+
+        try {
+            $driver = $this->userService->createDriver($request->all());
+            return response()->json($driver, 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        try {
+            $user = $this->userService->toggleUserStatus($id);
+            return response()->json([
+                'message' => 'Estado del usuario actualizado',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function updateUser(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
+            'rol_id' => 'sometimes|integer|exists:rols,id',
+        ]);
+
+        try {
+            $user = $this->userService->updateUser($id, $validated);
+            return response()->json([
+                'message' => 'Usuario actualizado correctamente',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function deleteUser(int $id): JsonResponse
+    {
+        try {
+            $this->userService->deleteUser($id);
+            return response()->json([
+                'message' => 'Usuario eliminado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+}
