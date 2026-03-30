@@ -93,8 +93,12 @@ class TripService
     /**
      * Iniciar carrera (Recoger al pasajero)
      */
-    public function startTrip(Trip $trip)
+    public function startTrip(Trip $trip, User $user)
     {
+        if ($trip->driver_id !== $user->id) {
+            throw new \Exception('No autorizado para iniciar este viaje.', 403);
+        }
+
         // Idempotency: If already started, just return the trip
         if ($trip->state_id === State::STARTED) {
             $trip->load(['passenger', 'driver', 'state']);
@@ -120,8 +124,12 @@ class TripService
     /**
      * Finalizar carrera
      */
-    public function finishTrip(Trip $trip)
+    public function finishTrip(Trip $trip, User $user)
     {
+        if ($trip->driver_id !== $user->id) {
+            throw new \Exception('No autorizado para finalizar este viaje.', 403);
+        }
+
         $trip = $this->tripRepo->update($trip, [
             'state_id' => State::FINISHED,
         ]);
@@ -147,13 +155,19 @@ class TripService
                 return $this->formatTripResponse($trip); // Already done
             }
 
+            // Ensure rol relationship is loaded
+            if (!$user->relationLoaded('rol')) {
+                $user->load('rol');
+            }
+            $roleName = $user->rol->rol_name;
+
             // If user is passenger, verify ownership
-            if ($user->role === 'pasajero' && $trip->passenger_id !== $user->id) {
+            if ($roleName === 'pasajero' && $trip->passenger_id !== $user->id) {
                 throw new \Exception('No autorizado para cancelar este viaje.', 403);
             }
 
             // If user is driver, verify assignment
-            if ($user->role === 'conductor' && $trip->driver_id !== $user->id) {
+            if ($roleName === 'conductor' && $trip->driver_id !== $user->id) {
                 throw new \Exception('No autorizado para cancelar este viaje.', 403);
             }
 
@@ -202,7 +216,7 @@ class TripService
             'driver' => $trip->driver ? [
                 'id' => $trip->driver->id,
                 'name' => $trip->driver->name,
-                'rating' => $trip->driver->score ?? 5.0, // Use stored score
+                'rating' => $trip->driver->score ?? 5.0,
                 'score' => $trip->driver->score ?? 5.0,
                 'rating_count' => $trip->driver->rating_count ?? 0,
                 // Coordenadas actuales del conductor (si existen)

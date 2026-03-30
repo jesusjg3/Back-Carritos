@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Trip;
 use App\Models\TripPosition;
+use App\Models\User;
 use App\Repositories\TripPositionRepository;
 use App\Repositories\TripRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -21,12 +22,16 @@ class TripPositionService
         $this->tripRepo = $tripRepo;
     }
 
-    public function storePosition(int $tripId, float $lat, float $lng, string $type): TripPosition
+    public function storePosition(int $tripId, User $user, float $lat, float $lng, string $type): TripPosition
     {
         $trip = $this->tripRepo->find($tripId);
 
         if (!$trip) {
             throw new ModelNotFoundException("Carrera no encontrada");
+        }
+
+        if ($trip->driver_id !== $user->id) {
+            throw new \Exception('No autorizado para enviar posición de esta carrera.', 403);
         }
 
         return $this->tripPositionRepo->create([

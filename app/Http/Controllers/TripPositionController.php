@@ -20,8 +20,11 @@ class TripPositionController extends Controller
     public function store(StoreTripPositionRequest $request, int $tripId): JsonResponse
     {
         try {
+            $user = auth()->user();
+            
             $position = $this->positionService->storePosition(
                 $tripId,
+                $user,
                 $request->input('lat'),
                 $request->input('lng'),
                 $request->input('type')

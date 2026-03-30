@@ -51,6 +51,13 @@ class DriverLocationService
                 $longitude,
                 $status
             ));
+
+            broadcast(new \App\Events\DriverLocationUpdated(
+                $user->id,
+                $activeTrip->id,
+                $latitude,
+                $longitude
+            ));
         }
 
         return $location;

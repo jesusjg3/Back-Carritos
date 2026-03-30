@@ -9,6 +9,8 @@ use App\Http\Controllers\TripController;
 use App\Http\Controllers\TripPositionController;
 use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\DriverLocationController;
 
 // Public
 Route::get('/destinations', [DestinationController::class, 'index']);
@@ -24,19 +26,22 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::middleware('is_active')->group(function () {
-        Route::get('/users', [AuthController::class, 'listUsers']);
-        Route::post('/users/drivers', [AuthController::class, 'storeDriver']);
-        Route::patch('/users/{id}/toggle-status', [AuthController::class, 'toggleStatus']);
-        Route::put('/users/{id}', [AuthController::class, 'updateUser']);
-        Route::delete('/users/{id}', [AuthController::class, 'deleteUser']);
+        // Rutas Exclusivas para el Administrador
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/users', [UserController::class, 'listUsers']);
+            Route::post('/users/drivers', [UserController::class, 'storeDriver']);
+            Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+            Route::put('/users/{id}', [UserController::class, 'updateUser']);
+            Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
 
-        Route::apiResource('rols', RolController::class);
-        Route::apiResource('states', StateController::class);
-        Route::apiResource('tabs', TabsController::class);
-        Route::post('/destinations', [DestinationController::class, 'store']);
-        Route::put('/destinations/{id}', [DestinationController::class, 'update']);
-        Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
-        Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
+            Route::apiResource('rols', RolController::class);
+            Route::apiResource('states', StateController::class);
+            Route::apiResource('tabs', TabsController::class);
+            Route::post('/destinations', [DestinationController::class, 'store']);
+            Route::put('/destinations/{id}', [DestinationController::class, 'update']);
+            Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
+            Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
+        });
 
         Route::post('/trips/request', [TripController::class, 'request']);
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
@@ -48,13 +53,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/trips/history', [TripController::class, 'history']);
         Route::get('/ratings', [TripRatingController::class, 'index']);
 
-        // Driver location
-        Route::post('/driver/location', [AuthController::class, 'updateDriverLocation']);
-        Route::post('/driver/offline', [AuthController::class, 'setDriverOffline']);
-        Route::get('/drivers/nearby', [AuthController::class, 'getNearbyDrivers']);
+        Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
+        Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
+        Route::get('/drivers/nearby', [DriverLocationController::class, 'getNearbyDrivers']);
     });
 });
-// Test Route to force broadcast
 Route::post('/test-broadcast/{id}', function ($id) {
     echo "Broadcasting TripTaken for Trip $id...";
     $trip = \App\Models\Trip::find($id);
@@ -69,7 +72,6 @@ Route::post('/test-broadcast-started/{id}', function ($id) {
     if (!$trip)
         return response()->json(['error' => 'Trip not found'], 404);
 
-    // Force state for payload correctness simulation if needed, or just broadcast
     broadcast(new \App\Events\TripStarted($trip));
     return response()->json(['message' => 'TripStarted Broadcast sent']);
 });
