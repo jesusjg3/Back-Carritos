@@ -18,7 +18,12 @@ class DestinationController extends Controller
 
     public function index(): JsonResponse
     {
-        $destinations = $this->destinationService->getAllDestinations();
+        $user = auth('api')->user();
+        if ($user && $user->rol_id === 1) {
+            $destinations = $this->destinationService->getAllAdminDestinations();
+        } else {
+            $destinations = $this->destinationService->getAllDestinations();
+        }
         return response()->json($destinations);
     }
 
@@ -44,6 +49,19 @@ class DestinationController extends Controller
     {
         $this->destinationService->deleteDestination($id);
         return response()->json(null, 204);
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        try {
+            $destination = $this->destinationService->restoreDestination($id);
+            return response()->json([
+                'message' => 'Destino restaurado exitosamente',
+                'destination' => $destination
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 
     public function toggleStatus(int $id): JsonResponse

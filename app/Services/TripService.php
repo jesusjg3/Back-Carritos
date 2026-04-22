@@ -24,6 +24,11 @@ class TripService
         return $this->statesService->getAllStates();
     }
 
+    public function getAllAdminTrips()
+    {
+        return $this->tripRepo->getAllWithRelations();
+    }
+
     /**
      * Usuario solicita carrera
      */

@@ -13,7 +13,7 @@ class DestinationRepository
 
     public function allIncludeInactive()
     {
-        return Destination::all();
+        return Destination::withTrashed()->get();
     }
 
     public function find(int $id)
@@ -38,6 +38,13 @@ class DestinationRepository
     {
         $destination = Destination::findOrFail($id);
         return $destination->delete();
+    }
+
+    public function restore(int $id)
+    {
+        $destination = Destination::withTrashed()->findOrFail($id);
+        $destination->restore();
+        return $destination;
     }
 
     public function toggleStatus(int $id)

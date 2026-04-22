@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->unsignedInteger('rating_count')->default(0)->comment('Total number of ratings received');
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

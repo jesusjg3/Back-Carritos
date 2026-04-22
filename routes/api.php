@@ -40,6 +40,7 @@ Route::middleware('auth:api')->group(function () {
             Route::post('/destinations', [DestinationController::class, 'store']);
             Route::put('/destinations/{id}', [DestinationController::class, 'update']);
             Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
+            Route::post('/destinations/{id}/restore', [DestinationController::class, 'restore']);
             Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
         });
 
@@ -50,6 +51,7 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
+        Route::get('/trips', [TripController::class, 'index']); // Historial Admin Completo
         Route::get('/trips/history', [TripController::class, 'history']);
         Route::get('/ratings', [TripRatingController::class, 'index']);
 

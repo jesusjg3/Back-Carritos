@@ -102,6 +102,12 @@ Use these accounts to log in after running the seeders:
 - **JWTException: Secret is not set**: Run `php artisan jwt:secret`.
 - **Permission denied for schema public**: Grant schema permissions to your DB user (see Step 4).
 
+## Funcionalidades Clave
+
+### Geofencing (Límite de Zona de Servicio)
+El backend incluye una doble validación de ubicación para evitar que usuarios soliciten viajes fuera de la universidad. 
+- **Validación Backend:** En `StoreTripRequest`, la fórmula de Haversine valida estrictamente que la latitud y longitud de origen del pasajero se encuentren dentro de un **radio de 1.5 kilómetros** del punto central del campus. Si el viaje se origina fuera de este límite, el servidor rechaza la petición con un error HTTP 422.
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

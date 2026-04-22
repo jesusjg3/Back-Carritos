@@ -18,6 +18,11 @@ class DestinationService
         return $this->destinationRepo->all();
     }
 
+    public function getAllAdminDestinations()
+    {
+        return $this->destinationRepo->allIncludeInactive();
+    }
+
     public function getDestinationById(int $id)
     {
         return $this->destinationRepo->find($id);
@@ -36,6 +41,11 @@ class DestinationService
     public function deleteDestination(int $id)
     {
         return $this->destinationRepo->delete($id);
+    }
+
+    public function restoreDestination(int $id)
+    {
+        return $this->destinationRepo->restore($id);
     }
 
     public function toggleDestinationStatus(int $id)
