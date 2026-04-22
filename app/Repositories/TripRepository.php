@@ -19,6 +19,11 @@ class TripRepository
         return Trip::all();
     }
 
+    public function getAllWithRelations()
+    {
+        return Trip::with(['passenger', 'driver', 'state'])->orderBy('created_at', 'desc')->get();
+    }
+
     public function find(int $id): Trip
     {
         return Trip::findOrFail($id);

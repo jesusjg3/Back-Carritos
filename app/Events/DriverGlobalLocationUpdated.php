@@ -2,28 +2,26 @@
 
 namespace App\Events;
 
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class DriverLocationUpdated implements ShouldBroadcastNow
+class DriverGlobalLocationUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public int $driverId;
-    public int $tripId;
     public float $latitude;
     public float $longitude;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $driverId, int $tripId, float $latitude, float $longitude)
+    public function __construct(int $driverId, float $latitude, float $longitude)
     {
         $this->driverId = $driverId;
-        $this->tripId = $tripId;
         $this->latitude = $latitude;
         $this->longitude = $longitude;
     }
@@ -35,9 +33,9 @@ class DriverLocationUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        // Emitir al canal privado del viaje específico
+        // Emitir a un canal PÚBLICO para monitoreo global
         return [
-            new PrivateChannel('trip.' . $this->tripId),
+            new Channel('drivers.live'),
         ];
     }
 
@@ -48,7 +46,6 @@ class DriverLocationUpdated implements ShouldBroadcastNow
     {
         return [
             'driver_id' => $this->driverId,
-            'trip_id' => $this->tripId,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'timestamp' => now()->toISOString(),
@@ -60,6 +57,6 @@ class DriverLocationUpdated implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'DriverLocationUpdated';
+        return 'DriverGlobalLocationUpdated';
     }
 }

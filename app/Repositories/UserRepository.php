@@ -14,7 +14,7 @@ class UserRepository
 
     public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?bool $isActive = null)
     {
-        $query = User::with('rol');
+        $query = User::with('rol')->withTrashed();
 
         if ($search) {
             $query->where(function ($q) use ($search) {

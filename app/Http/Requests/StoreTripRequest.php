@@ -50,6 +50,32 @@ class StoreTripRequest extends FormRequest
         ];
     }
 
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $lat = $this->input('origin_lat');
+            $lng = $this->input('origin_lng');
+
+            if ($lat && $lng) {
+                // Punto central aproximado del campus
+                $centerLat = -0.9525;
+                $centerLng = -80.7450;
+                
+                // Calcular distancia en km (Fórmula de Haversine)
+                $earthRadius = 6371;
+                $dLat = deg2rad($lat - $centerLat);
+                $dLng = deg2rad($lng - $centerLng);
+                $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($centerLat)) * cos(deg2rad($lat)) * sin($dLng/2) * sin($dLng/2);
+                $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+                $distance = $earthRadius * $c;
+
+                // Límite de distancia de 1.5 km
+                if ($distance > 1.5) {
+                    $validator->errors()->add('origin_lat', 'Estás fuera de la zona de servicio permitida para pedir carritos.');
+                }
+            }
+        });
+    }
 }
 
 

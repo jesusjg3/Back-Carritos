@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('tab_icon')->nullable();
             $table->integer('tab_order');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('state_name'); //solicitado, aceptado, en_curso, finalizado, cancelado
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

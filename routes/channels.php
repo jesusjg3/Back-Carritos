@@ -19,3 +19,8 @@ Broadcast::channel('trip.{tripId}', function ($user, $tripId) {
     // Autorizar solo al pasajero o conductor de ese viaje específico
     return $trip && ($trip->passenger_id === $user->id || $trip->driver_id === $user->id);
 });
+
+// Admin Radar en Vivo
+Broadcast::channel('admin.live_tracking', function ($user) {
+    return $user->rol_id === 1; // Solo administradores pueden ver el radar global
+});

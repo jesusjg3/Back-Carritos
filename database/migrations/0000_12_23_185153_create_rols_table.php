@@ -12,6 +12,7 @@ return new class extends Migration {
             $table->id();
             $table->string('rol_name'); //pasajero, conductor, admin
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
