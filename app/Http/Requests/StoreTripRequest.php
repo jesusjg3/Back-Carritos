@@ -69,10 +69,12 @@ class StoreTripRequest extends FormRequest
                 $c = 2 * atan2(sqrt($a), sqrt(1-$a));
                 $distance = $earthRadius * $c;
 
-                // Límite de distancia de 1.5 km
+                // Límite de distancia de 1.5 km (Desactivado temporalmente para pruebas desde casa)
+                /*
                 if ($distance > 1.5) {
                     $validator->errors()->add('origin_lat', 'Estás fuera de la zona de servicio permitida para pedir carritos.');
                 }
+                */
             }
         });
     }

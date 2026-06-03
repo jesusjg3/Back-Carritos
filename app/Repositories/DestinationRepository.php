@@ -18,7 +18,7 @@ class DestinationRepository
 
     public function find(int $id)
     {
-        return Destination::findOrFail($id);
+        return Destination::withTrashed()->findOrFail($id);
     }
 
     public function create(array $data)
@@ -28,7 +28,7 @@ class DestinationRepository
 
     public function update(int $id, array $data)
     {
-        $destination = Destination::findOrFail($id);
+        $destination = Destination::withTrashed()->findOrFail($id);
         $destination->update($data);
 
         return $destination;
@@ -36,7 +36,7 @@ class DestinationRepository
 
     public function delete(int $id)
     {
-        $destination = Destination::findOrFail($id);
+        $destination = Destination::withTrashed()->findOrFail($id);
         return $destination->delete();
     }
 
@@ -49,7 +49,7 @@ class DestinationRepository
 
     public function toggleStatus(int $id)
     {
-        $destination = Destination::findOrFail($id);
+        $destination = Destination::withTrashed()->findOrFail($id);
         $destination->is_active = !$destination->is_active;
         $destination->save();
 

@@ -33,6 +33,7 @@ Route::middleware('auth:api')->group(function () {
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             Route::put('/users/{id}', [UserController::class, 'updateUser']);
             Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
+            Route::post('/users/{id}/restore', [UserController::class, 'restoreUser']);
 
             Route::apiResource('rols', RolController::class);
             Route::apiResource('states', StateController::class);
@@ -58,6 +59,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
         Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
         Route::get('/drivers/nearby', [DriverLocationController::class, 'getNearbyDrivers']);
+        Route::get('/users/drivers', [DriverLocationController::class, 'getOnlineDrivers']);
     });
 });
 Route::post('/test-broadcast/{id}', function ($id) {

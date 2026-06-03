@@ -52,7 +52,7 @@ class UserRepository
 
     public function update($id, array $data)
     {
-        $user = User::findOrFail($id);
+        $user = User::withTrashed()->findOrFail($id);
 
         if (!empty($data["password"])) {
             $data["password"] = Hash::make($data["password"]);
@@ -64,14 +64,21 @@ class UserRepository
 
     public function delete($id)
     {
-        return User::findOrFail($id)->delete();
+        return User::withTrashed()->findOrFail($id)->delete();
     }
 
     public function toggleStatus($id)
     {
-        $user = User::with('rol')->findOrFail($id);
+        $user = User::with('rol')->withTrashed()->findOrFail($id);
         $user->is_active = !$user->is_active;
         $user->save();
+        return $user;
+    }
+
+    public function restore($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+        $user->restore();
         return $user;
     }
 }

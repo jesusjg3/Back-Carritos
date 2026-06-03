@@ -14,7 +14,7 @@ class UpdateDestinationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|required|string|min:3|max:255|unique:destinations,name,' . $this->route('destination'),
+            'name' => 'sometimes|required|string|min:3|max:255|unique:destinations,name,' . $this->route('id'),
             'description' => 'nullable|string|max:500',
             'latitude' => 'sometimes|required|numeric|between:-90,90',
             'longitude' => 'sometimes|required|numeric|between:-180,180',
