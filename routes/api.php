@@ -11,6 +11,7 @@ use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DriverLocationController;
+use App\Http\Controllers\ReportController;
 
 // Public
 Route::get('/destinations', [DestinationController::class, 'index']);
@@ -42,6 +43,14 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
             Route::post('/destinations/{id}/restore', [DestinationController::class, 'restore']);
             Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
+
+            // Reportes
+            Route::get('/reports/summary', [ReportController::class, 'summary']);
+            Route::get('/reports/top-drivers', [ReportController::class, 'topDrivers']);
+            Route::get('/reports/top-passengers', [ReportController::class, 'topPassengers']);
+            Route::get('/reports/trips-by-date', [ReportController::class, 'tripsByDate']);
+            Route::get('/reports/ratings-distribution', [ReportController::class, 'ratingsDistribution']);
+            Route::get('/reports/coverage-map', [ReportController::class, 'coverageMap']);
         });
 
         Route::post('/trips/request', [TripController::class, 'request']);
