@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\Cache;
 
 class UserService
 {
@@ -47,7 +48,7 @@ class UserService
 
     public function updateUser(int $id, array $data)
     {
-        $allowedFields = ['name', 'email', 'rol_id'];
+        $allowedFields = ['name', 'email', 'rol_id', 'password'];
         $updateData = array_intersect_key($data, array_flip($allowedFields));
 
         $updatedUser = $this->userRepo->update($id, $updateData);
@@ -76,5 +77,30 @@ class UserService
     public function restoreUser(int $id)
     {
         return $this->userRepo->restore($id);
+    }
+
+    public function getDashboardStats()
+    {
+        return Cache::remember('dashboard_stats', 15, function () {
+            $driverRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
+            $driverRoleId = $driverRole ? $driverRole->id : 3;
+
+            $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();
+            $adminRoleId = $adminRole ? $adminRole->id : 1;
+
+            $passengerRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
+            $passengerRoleId = $passengerRole ? $passengerRole->id : 2;
+
+            return [
+                'users' => \App\Models\User::withTrashed()->count(),
+                'drivers' => \App\Models\User::withTrashed()->where('rol_id', $driverRoleId)->count(),
+                'admins' => \App\Models\User::withTrashed()->where('rol_id', $adminRoleId)->count(),
+                'passengers' => \App\Models\User::withTrashed()->where('rol_id', $passengerRoleId)->count(),
+                'destinations' => \App\Models\Destination::withTrashed()->count(),
+                'trips' => \App\Models\Trip::count(),
+                'active' => \App\Models\Trip::whereIn('state_id', [1, 2, 4])->count(),
+                'completed' => \App\Models\Trip::where('state_id', 3)->count(),
+            ];
+        });
     }
 }

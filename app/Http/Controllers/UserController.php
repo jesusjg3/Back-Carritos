@@ -62,6 +62,7 @@ class UserController extends Controller
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id . ',id,deleted_at,NULL',
             'rol_id' => 'sometimes|integer|exists:rols,id',
+            'password' => 'sometimes|nullable|string|min:8',
         ]);
 
         try {
@@ -95,6 +96,16 @@ class UserController extends Controller
                 'message' => 'Usuario restaurado correctamente',
                 'user' => $user
             ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function dashboardStats(): JsonResponse
+    {
+        try {
+            $stats = $this->userService->getDashboardStats();
+            return response()->json($stats);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }

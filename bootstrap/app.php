@@ -18,8 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
-        // Configurar CORS para todas las rutas API
-        $middleware->statefulApi();
+        // Configurar CORS para todas las rutas API (Nota: statefulApi habilitaba Sanctum, lo cual interfiere con JWT en localhost)
+        // $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

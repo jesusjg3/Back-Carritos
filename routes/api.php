@@ -11,6 +11,7 @@ use App\Http\Controllers\TripRatingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DriverLocationController;
+use App\Http\Controllers\ReportController;
 
 // Public
 Route::get('/destinations', [DestinationController::class, 'index']);
@@ -28,6 +29,14 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('is_active')->group(function () {
         // Rutas Exclusivas para el Administrador
         Route::middleware('role:admin')->group(function () {
+            Route::get('/dashboard/stats', [UserController::class, 'dashboardStats']);
+            Route::get('/reports/drivers-summary', [ReportController::class, 'driversSummary']);
+            Route::get('/reports/destinations-summary', [ReportController::class, 'destinationsSummary']);
+            Route::get('/reports/hourly-summary', [ReportController::class, 'hourlySummary']);
+            Route::get('/reports/daily-summary', [ReportController::class, 'dailySummary']);
+            Route::get('/reports/ratings-distribution', [ReportController::class, 'ratingsDistribution']);
+            Route::get('/reports/routes-performance', [ReportController::class, 'routesPerformance']);
+            Route::get('/reports/all-summary', [ReportController::class, 'allSummary']);
             Route::get('/users', [UserController::class, 'listUsers']);
             Route::post('/users/drivers', [UserController::class, 'storeDriver']);
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
