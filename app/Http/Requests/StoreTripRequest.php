@@ -65,9 +65,9 @@ class StoreTripRequest extends FormRequest
                 $earthRadius = 6371;
                 $dLat = deg2rad($lat - $centerLat);
                 $dLng = deg2rad($lng - $centerLng);
-                $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($centerLat)) * cos(deg2rad($lat)) * sin($dLng/2) * sin($dLng/2);
-                $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-                $distance = $earthRadius * $c;
+                $haversineValA = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($centerLat)) * cos(deg2rad($lat)) * sin($dLng/2) * sin($dLng/2);
+                $haversineValC = 2 * atan2(sqrt($haversineValA), sqrt(1-$haversineValA));
+                $distance = $earthRadius * $haversineValC;
 
                 // Límite de distancia de 1.5 km (Desactivado temporalmente para pruebas desde casa)
                 /*

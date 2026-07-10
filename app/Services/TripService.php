@@ -24,14 +24,11 @@ class TripService
         return $this->statesService->getAllStates();
     }
 
-    public function getAllAdminTrips()
+    public function getAllAdminTrips(int $perPage = 10)
     {
-        return $this->tripRepo->getAllWithRelations();
+        return $this->tripRepo->getAllWithRelations($perPage);
     }
 
-    /**
-     * Usuario solicita carrera
-     */
     /**
      * Usuario solicita carrera
      */
@@ -52,7 +49,6 @@ class TripService
             return $this->formatTripResponse($trip);
         });
     }
-
     /**
      * Conductor acepta carrera (with Race Condition protection)
      */

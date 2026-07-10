@@ -14,7 +14,7 @@ class DriverLocationController extends Controller
     {
         $user = $request->user();
 
-        if (!$user || !$user->role || $user->role->rol_name !== 'conductor') {
+        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
             return response()->json(['error' => 'Solo los conductores pueden actualizar su ubicación'], 403);
         }
 
@@ -46,7 +46,7 @@ class DriverLocationController extends Controller
     {
         $user = $request->user();
 
-        if (!$user || !$user->role || $user->role->rol_name !== 'conductor') {
+        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
             return response()->json(['error' => 'Solo los conductores pueden cambiar su estado'], 403);
         }
 

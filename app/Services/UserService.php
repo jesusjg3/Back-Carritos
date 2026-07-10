@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
-use Illuminate\Support\Facades\Cache;
 
 class UserService
 {
@@ -17,9 +16,9 @@ class UserService
         $this->rolRepo = $rolRepo;
     }
 
-    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive)
+    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive, ?string $roleName = null)
     {
-        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive);
+        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive, $roleName);
     }
 
     public function createDriver(array $data)
@@ -35,6 +34,25 @@ class UserService
             'email' => $data['email'],
             'password' => $data['password'],
             'rol_id' => $driverRole->id,
+            'is_active' => true,
+        ]);
+
+        return $this->userRepo->find($user->id);
+    }
+
+    public function createAdmin(array $data)
+    {
+        $adminRole = $this->rolRepo->findByName('admin');
+
+        if (!$adminRole) {
+            throw new \Exception('El rol de administrador no existe.');
+        }
+
+        $user = $this->userRepo->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'rol_id' => $adminRole->id,
             'is_active' => true,
         ]);
 
@@ -77,30 +95,5 @@ class UserService
     public function restoreUser(int $id)
     {
         return $this->userRepo->restore($id);
-    }
-
-    public function getDashboardStats()
-    {
-        return Cache::remember('dashboard_stats', 15, function () {
-            $driverRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
-            $driverRoleId = $driverRole ? $driverRole->id : 3;
-
-            $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();
-            $adminRoleId = $adminRole ? $adminRole->id : 1;
-
-            $passengerRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
-            $passengerRoleId = $passengerRole ? $passengerRole->id : 2;
-
-            return [
-                'users' => \App\Models\User::withTrashed()->count(),
-                'drivers' => \App\Models\User::withTrashed()->where('rol_id', $driverRoleId)->count(),
-                'admins' => \App\Models\User::withTrashed()->where('rol_id', $adminRoleId)->count(),
-                'passengers' => \App\Models\User::withTrashed()->where('rol_id', $passengerRoleId)->count(),
-                'destinations' => \App\Models\Destination::withTrashed()->count(),
-                'trips' => \App\Models\Trip::count(),
-                'active' => \App\Models\Trip::whereIn('state_id', [1, 2, 4])->count(),
-                'completed' => \App\Models\Trip::where('state_id', 3)->count(),
-            ];
-        });
     }
 }

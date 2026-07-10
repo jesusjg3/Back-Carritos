@@ -6,6 +6,7 @@ use App\Http\Requests\StoreDestinationRequest;
 use App\Http\Requests\UpdateDestinationRequest;
 use App\Services\DestinationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DestinationController extends Controller
 {
@@ -16,13 +17,22 @@ class DestinationController extends Controller
         $this->destinationService = $destinationService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = auth('api')->user();
-        if ($user && $user->rol_id === 1) {
-            $destinations = $this->destinationService->getAllAdminDestinations();
-        } else {
+
+        if ($request->boolean('only_active', false)) {
             $destinations = $this->destinationService->getAllDestinations();
+        } elseif ($request->has('per_page')) {
+            $perPage = $request->integer('per_page', 10);
+            $search = $request->query('search');
+            $destinations = $this->destinationService->getPaginatedAdminDestinations($perPage, $search);
+        } else {
+            if ($user && $user->rol_id === 1) {
+                $destinations = $this->destinationService->getAllAdminDestinations();
+            } else {
+                $destinations = $this->destinationService->getAllDestinations();
+            }
         }
         return response()->json($destinations);
     }

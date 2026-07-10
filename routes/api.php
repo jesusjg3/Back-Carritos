@@ -29,7 +29,7 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('is_active')->group(function () {
         // Rutas Exclusivas para el Administrador
         Route::middleware('role:admin')->group(function () {
-            Route::get('/dashboard/stats', [UserController::class, 'dashboardStats']);
+            Route::get('/dashboard/stats', [ReportController::class, 'dashboardStats']);
             Route::get('/reports/drivers-summary', [ReportController::class, 'driversSummary']);
             Route::get('/reports/destinations-summary', [ReportController::class, 'destinationsSummary']);
             Route::get('/reports/hourly-summary', [ReportController::class, 'hourlySummary']);
@@ -39,6 +39,7 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/reports/all-summary', [ReportController::class, 'allSummary']);
             Route::get('/users', [UserController::class, 'listUsers']);
             Route::post('/users/drivers', [UserController::class, 'storeDriver']);
+            Route::post('/users/admins', [UserController::class, 'storeAdmin']);
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             Route::put('/users/{id}', [UserController::class, 'updateUser']);
             Route::delete('/users/{id}', [UserController::class, 'deleteUser']);

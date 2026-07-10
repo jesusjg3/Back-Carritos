@@ -21,11 +21,13 @@ class TripController extends Controller
     /**
      * Get All Trips for Administrator Log.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
         if ($user && $user->rol_id === 1) {
-            $trips = $this->tripService->getAllAdminTrips();
+            $perPage = $request->integer('per_page', 10);
+            $search = $request->query('search');
+            $trips = $this->tripService->getAllAdminTrips($perPage, $search);
             return response()->json($trips);
         }
         return response()->json(['error' => 'No autorizado'], 403);

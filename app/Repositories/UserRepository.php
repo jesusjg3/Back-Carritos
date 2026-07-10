@@ -12,19 +12,25 @@ class UserRepository
         return User::with('rol')->get();
     }
 
-    public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?bool $isActive = null)
+    public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?bool $isActive = null, ?string $roleName = null)
     {
         $query = User::with('rol')->withTrashed();
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%");
             });
         }
 
         if ($roleId) {
             $query->where('rol_id', $roleId);
+        }
+
+        if ($roleName) {
+            $query->whereHas('rol', function ($subQuery) use ($roleName) {
+                $subQuery->where('rol_name', $roleName);
+            });
         }
 
         if ($isActive !== null) {

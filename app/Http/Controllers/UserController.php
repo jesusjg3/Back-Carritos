@@ -20,9 +20,10 @@ class UserController extends Controller
         $perPage = $request->integer('per_page', 10);
         $search = $request->query('search');
         $roleId = $request->query('role_id');
+        $roleName = $request->query('role_name');
         $isActive = $request->has('is_active') ? $request->boolean('is_active') : null;
 
-        $users = $this->userService->listUsers($perPage, $search, $roleId, $isActive);
+        $users = $this->userService->listUsers($perPage, $search, $roleId, $isActive, $roleName);
 
         return response()->json($users);
     }
@@ -38,6 +39,22 @@ class UserController extends Controller
         try {
             $driver = $this->userService->createDriver($request->all());
             return response()->json($driver, 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function storeAdmin(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
+            'password' => 'required|string|min:8',
+        ]);
+
+        try {
+            $admin = $this->userService->createAdmin($request->all());
+            return response()->json($admin, 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
@@ -101,13 +118,4 @@ class UserController extends Controller
         }
     }
 
-    public function dashboardStats(): JsonResponse
-    {
-        try {
-            $stats = $this->userService->getDashboardStats();
-            return response()->json($stats);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
-    }
 }

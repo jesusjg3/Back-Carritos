@@ -16,6 +16,21 @@ class DestinationRepository
         return Destination::withTrashed()->get();
     }
 
+    public function paginateAdminDestinations(int $perPage, ?string $search = null)
+    {
+        $query = Destination::withTrashed();
+
+        if ($search) {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%")
+                    ->orWhere('address', 'ilike', "%{$search}%");
+            });
+        }
+
+        return $query->paginate($perPage);
+    }
+
     public function find(int $id)
     {
         return Destination::withTrashed()->findOrFail($id);
