@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
@@ -16,9 +17,9 @@ class UserService
         $this->rolRepo = $rolRepo;
     }
 
-    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive, ?string $roleName = null)
+    public function listUsers(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive, $roleName);
+        return $this->userRepo->paginate($perPage, $search, $roleId, $status, $roleName);
     }
 
     public function createDriver(array $data)
@@ -32,7 +33,7 @@ class UserService
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Hash::make($data['password']),
             'rol_id' => $driverRole->id,
             'is_active' => true,
         ]);
@@ -51,7 +52,7 @@ class UserService
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Hash::make($data['password']),
             'rol_id' => $adminRole->id,
             'is_active' => true,
         ]);
@@ -68,6 +69,10 @@ class UserService
     {
         $allowedFields = ['name', 'email', 'rol_id', 'password'];
         $updateData = array_intersect_key($data, array_flip($allowedFields));
+
+        if (!empty($updateData['password'])) {
+            $updateData['password'] = Hash::make($updateData['password']);
+        }
 
         $updatedUser = $this->userRepo->update($id, $updateData);
 

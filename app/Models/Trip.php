@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Trip extends Model
 {
     protected $fillable = [
-        'passenger_id',
         'driver_id',
         'state_id',
         'origin_lat',
@@ -21,9 +20,16 @@ class Trip extends Model
         'request_attempt',
     ];
 
-    public function passenger()
+    public function passengers()
     {
-        return $this->belongsTo(User::class, 'passenger_id');
+        return $this->belongsToMany(User::class, 'trip_passengers', 'trip_id', 'passenger_id')
+                    ->withPivot('status')
+                    ->withTimestamps();
+    }
+
+    public function tripPassengers()
+    {
+        return $this->hasMany(TripPassenger::class);
     }
 
     public function driver()

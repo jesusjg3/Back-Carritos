@@ -125,7 +125,6 @@ class DummyDataSeeder extends Seeder
             $fechaViaje = $now->copy()->subDays($diasAtras)->setHour($horaAleatoria)->setMinute($minutoAleatorio);
 
             $trip = Trip::create([
-                'passenger_id' => $passenger->id,
                 'driver_id' => $stateId !== 1 ? $driver->id : null, // Solicitado no tiene conductor asignado aún
                 'state_id' => $stateId,
                 'origin_lat' => $orig->latitude,
@@ -139,6 +138,20 @@ class DummyDataSeeder extends Seeder
                 'request_attempt' => rand(1, 2),
                 'created_at' => $fechaViaje,
                 'updated_at' => $fechaViaje->copy()->addMinutes(rand(3, 10)),
+            ]);
+
+            // Determine the correct status for the passenger
+            $passengerStatus = match ($stateId) {
+                1 => 'requested',
+                2 => 'boarded',
+                3 => 'dropped_off',
+                4 => 'cancelled',
+                default => 'requested',
+            };
+
+            // Associate the passenger with the trip
+            $trip->passengers()->attach($passenger->id, [
+                'status' => $passengerStatus,
             ]);
 
             // Si está terminado, agregar calificación

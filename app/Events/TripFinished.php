@@ -33,9 +33,11 @@ class TripFinished implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('passenger.' . $this->trip->passenger_id),
-        ];
+        $channels = [];
+        foreach ($this->trip->passengers as $passenger) {
+            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+        }
+        return $channels;
     }
 
     public function broadcastWith(): array

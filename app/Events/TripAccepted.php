@@ -33,15 +33,17 @@ class TripAccepted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('passenger.' . $this->trip->passenger_id),
-        ];
+        $channels = [];
+        foreach ($this->trip->passengers as $passenger) {
+            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+        }
+        return $channels;
     }
 
     public function broadcastWith(): array
     {
         // Cargar relaciones necesarias para el frontend
-        $this->trip->load(['driver.driverLocation', 'state']);
+        $this->trip->load(['state']);
 
         return [
             'trip' => [
@@ -51,10 +53,10 @@ class TripAccepted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
-                    'rating' => $this->trip->driver->score ?? 5.0,
-                    'score' => $this->trip->driver->score ?? 5.0,
-                    'latitude' => $this->trip->driver->driverLocation->latitude ?? null,
-                    'longitude' => $this->trip->driver->driverLocation->longitude ?? null,
+                    'rating' => $this->trip->driver->ratingProfile->score ?? 5.0,
+                    'score' => $this->trip->driver->ratingProfile->score ?? 5.0,
+                    'latitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['latitude'] ?? null,
+                    'longitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['longitude'] ?? null,
                     // Agregar más campos si es necesario (foto, placa, etc.)
                 ] : null,
                 'origin' => [

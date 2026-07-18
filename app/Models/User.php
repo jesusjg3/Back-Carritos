@@ -27,8 +27,6 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'rol_id',
         'is_active',
-        'score',
-        'rating_count',
     ];
 
     /**
@@ -60,9 +58,9 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Rol::class);
     }
 
-    public function driverLocation(): HasOne
+    public function ratingProfile(): HasOne
     {
-        return $this->hasOne(DriverLocation::class);
+        return $this->hasOne(UserRating::class);
     }
 
     public function TripsAsPassengers()

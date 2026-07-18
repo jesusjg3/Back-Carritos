@@ -12,17 +12,11 @@ class StateSeeder extends Seeder
      */
     public function run(): void
     {
-        // IDs must match constants in App\Models\State
-        // const REQUESTED = 1;
-        // const ACCEPTED = 2;
-        // const FINISHED = 3;
-
         State::firstOrCreate(['id' => 1], ['state_name' => 'SOLICITADO']);
-        State::firstOrCreate(['id' => 2], ['state_name' => 'EN VIAJE']);
+        State::firstOrCreate(['id' => 2], ['state_name' => 'ACEPTADO']);
         State::firstOrCreate(['id' => 3], ['state_name' => 'TERMINADO']);
-
-        // You can add more states if needed, e.g. CANCELADO
-        State::firstOrCreate(['id' => 4], ['state_name' => 'CANCELADO']);
+        State::firstOrCreate(['id' => 4], ['state_name' => 'INICIADO']);
+        State::firstOrCreate(['id' => 5], ['state_name' => 'CANCELADO']);
     }
 }
 

@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolSeeder::class,
             StateSeeder::class,
-            TabSeeder::class,
             DestinationSeeder::class,
             DummyDataSeeder::class,
         ]);

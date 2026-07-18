@@ -8,24 +8,25 @@ use App\Models\Rol;
 use App\Models\Destination;
 use App\Models\State;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Cache;
 class ReportRepository
 {
     /**
      * Obtener resumen de rendimiento de conductores.
      */
-    public function getDriversSummary(?string $search = null, ?int $perPage = null)
+    public function getDriversSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
     {
         $query = User::whereHas('rol', function ($query) {
                 $query->where('rol_name', 'conductor');
             })
             ->leftJoin('trips', 'users.id', '=', 'trips.driver_id')
+            ->leftJoin('user_ratings', 'users.id', '=', 'user_ratings.user_id')
             ->select(
                 'users.id',
                 'users.name',
                 'users.email',
-                'users.score',
-                'users.rating_count',
+                'user_ratings.score',
+                'user_ratings.rating_count',
                 'users.is_active',
                 DB::raw('COUNT(CASE WHEN trips.state_id = ' . State::FINISHED . ' THEN 1 END) as completed_trips'),
                 DB::raw('COUNT(CASE WHEN trips.state_id = ' . State::CANCELLED . ' THEN 1 END) as canceled_trips'),
@@ -33,7 +34,14 @@ class ReportRepository
                 DB::raw('COALESCE(ROUND(AVG(CASE WHEN trips.state_id = ' . State::FINISHED . ' THEN trips.passengers_count END)::numeric, 1), 0.0) as avg_passengers'),
                 DB::raw('COALESCE(ROUND(AVG(CASE WHEN trips.state_id = ' . State::FINISHED . ' THEN EXTRACT(EPOCH FROM (trips.updated_at - trips.created_at))/60 END)::numeric, 1), 0.0) as avg_duration_minutes')
             )
-            ->groupBy('users.id', 'users.name', 'users.email', 'users.score', 'users.rating_count', 'users.is_active');
+            ->groupBy('users.id', 'users.name', 'users.email', 'user_ratings.score', 'user_ratings.rating_count', 'users.is_active');
+
+        if ($startDate) {
+            $query->where('trips.created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->where('trips.created_at', '<=', $endDate . ' 23:59:59');
+        }
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -52,70 +60,92 @@ class ReportRepository
     /**
      * Obtener el conteo total de viajes completados.
      */
-    public function getCompletedTripsCount(): int
+    public function getCompletedTripsCount(?string $startDate = null, ?string $endDate = null): int
     {
-        return Trip::where('state_id', State::FINISHED)->count();
+        $query = Trip::where('state_id', State::FINISHED);
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        return $query->count();
     }
 
     /**
      * Obtener resumen de destinos con porcentajes.
      */
-    public function getDestinationsSummary(int $safeTotalCompleted): array
+    public function getDestinationsSummary(int $safeTotalCompleted, ?string $startDate = null, ?string $endDate = null): array
     {
-        return Trip::where('state_id', State::FINISHED)
-            ->select(
-                'destination_address',
-                DB::raw('COUNT(*) as count'),
-                DB::raw('ROUND((COUNT(*)::numeric / ' . $safeTotalCompleted . '::numeric) * 100, 2) as percentage')
-            )
-            ->groupBy('destination_address')
-            ->orderBy('count', 'desc')
-            ->limit(5)
-            ->get()
-            ->toArray();
+        $query = Trip::where('state_id', State::FINISHED);
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
+                    'destination_address',
+                    DB::raw('COUNT(*) as count'),
+                    DB::raw('ROUND((COUNT(*)::numeric / ' . $safeTotalCompleted . '::numeric) * 100, 2) as percentage')
+                )
+                ->groupBy('destination_address')
+                ->orderBy('count', 'desc')
+                ->limit(5)
+                ->get()
+                ->toArray();
     }
 
     /**
      * Obtener resumen de demanda por horas.
      */
-    public function getHourlySummary(): array
+    public function getHourlySummary(?string $startDate = null, ?string $endDate = null): array
     {
-        return Trip::where('state_id', State::FINISHED)
-            ->select(
-                DB::raw('CAST(EXTRACT(HOUR FROM created_at) AS INTEGER) as hour'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('CAST(COALESCE(SUM(passengers_count), 0) AS INTEGER) as passengers_count')
-            )
-            ->groupBy('hour')
-            ->orderBy('hour', 'asc')
-            ->get()
-            ->toArray();
+        $query = Trip::where('state_id', State::FINISHED);
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
+                    DB::raw('CAST(EXTRACT(HOUR FROM created_at) AS INTEGER) as hour'),
+                    DB::raw('COUNT(*) as count'),
+                    DB::raw('CAST(COALESCE(SUM(passengers_count), 0) AS INTEGER) as passengers_count')
+                )
+                ->groupBy('hour')
+                ->orderBy('hour', 'asc')
+                ->get()
+                ->toArray();
     }
 
     /**
      * Obtener resumen de demanda por día de la semana.
      */
-    public function getDailySummary(): array
+    public function getDailySummary(?string $startDate = null, ?string $endDate = null): array
     {
-        return Trip::where('state_id', State::FINISHED)
-            ->where('created_at', '>=', now()->subDays(15))
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('COUNT(*) as count')
-            )
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->get()
-            ->toArray();
+        $query = Trip::where('state_id', State::FINISHED);
+        
+        if ($startDate) {
+            $query->where('created_at', '>=', $startDate);
+        } else {
+            $query->where('created_at', '>=', now()->subDays(15));
+        }
+        
+        if ($endDate) {
+            $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        }
+
+        return $query->select(
+                    DB::raw('DATE(created_at) as date'),
+                    DB::raw('COUNT(*) as count')
+                )
+                ->groupBy('date')
+                ->orderBy('date', 'asc')
+                ->get()
+                ->toArray();
     }
 
     /**
      * Obtener la distribución de puntuaciones (estrellas).
      */
-    public function getRatingsDistribution(): array
+    public function getRatingsDistribution(?string $startDate = null, ?string $endDate = null): array
     {
-        return DB::table('trip_ratings')
-            ->select(
+        $query = DB::table('trip_ratings');
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
                 DB::raw('CAST(rating AS INTEGER) as stars'),
                 DB::raw('COUNT(*) as count')
             )
@@ -128,11 +158,15 @@ class ReportRepository
     /**
      * Obtener los comentarios recientes.
      */
-    public function getRecentComments(): array
+    public function getRecentComments(?string $startDate = null, ?string $endDate = null): array
     {
-        return DB::table('trip_ratings')
-            ->join('users', 'trip_ratings.emitter_id', '=', 'users.id')
-            ->select(
+        $query = DB::table('trip_ratings')
+            ->join('users', 'trip_ratings.emitter_id', '=', 'users.id');
+        
+        if ($startDate) $query->where('trip_ratings.created_at', '>=', $startDate);
+        if ($endDate) $query->where('trip_ratings.created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
                 'trip_ratings.rating',
                 'trip_ratings.comment',
                 'trip_ratings.created_at',
@@ -149,46 +183,72 @@ class ReportRepository
     /**
      * Obtener el rendimiento por rutas.
      */
-    public function getRoutesPerformance(): array
+    public function getRoutesPerformance(?string $startDate = null, ?string $endDate = null): array
     {
-        return Trip::where('state_id', State::FINISHED)
-            ->where('created_at', '>=', now()->subDays(15))
-            ->select(
-                'origin_address',
-                'destination_address',
-                DB::raw('COUNT(*) as count'),
-                DB::raw('COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/60)::numeric, 1), 0.0) as avg_duration_minutes')
-            )
-            ->groupBy('origin_address', 'destination_address')
-            ->orderBy('count', 'desc')
-            ->limit(5)
-            ->get()
-            ->toArray();
+        $query = Trip::where('state_id', State::FINISHED);
+        
+        if ($startDate) {
+            $query->where('created_at', '>=', $startDate);
+        } else {
+            $query->where('created_at', '>=', now()->subDays(15));
+        }
+        
+        if ($endDate) {
+            $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        }
+
+        return $query->select(
+                    'origin_address',
+                    'destination_address',
+                    DB::raw('COUNT(*) as count'),
+                    DB::raw('COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/60)::numeric, 1), 0.0) as avg_duration_minutes')
+                )
+                ->groupBy('origin_address', 'destination_address')
+                ->orderBy('count', 'desc')
+                ->limit(5)
+                ->get()
+                ->toArray();
     }
 
     /**
      * Obtener estadísticas generales para el dashboard.
      */
-    public function getDashboardStats(): array
+    public function getDashboardStats(?string $startDate = null, ?string $endDate = null): array
     {
         $driverRole = Rol::where('rol_name', 'conductor')->first();
-        $driverRoleId = $driverRole ? $driverRole->id : 3;
+            $driverRoleId = $driverRole ? $driverRole->id : 3;
 
-        $adminRole = Rol::where('rol_name', 'admin')->first();
-        $adminRoleId = $adminRole ? $adminRole->id : 1;
+            $adminRole = Rol::where('rol_name', 'admin')->first();
+            $adminRoleId = $adminRole ? $adminRole->id : 1;
 
-        $passengerRole = Rol::where('rol_name', 'pasajero')->first();
-        $passengerRoleId = $passengerRole ? $passengerRole->id : 2;
+            $passengerRole = Rol::where('rol_name', 'pasajero')->first();
+            $passengerRoleId = $passengerRole ? $passengerRole->id : 2;
 
-        return [
-            'users' => User::withTrashed()->count(),
-            'drivers' => User::withTrashed()->where('rol_id', $driverRoleId)->count(),
-            'admins' => User::withTrashed()->where('rol_id', $adminRoleId)->count(),
-            'passengers' => User::withTrashed()->where('rol_id', $passengerRoleId)->count(),
-            'destinations' => Destination::withTrashed()->count(),
-            'trips' => Trip::count(),
-            'active' => Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])->count(),
-            'completed' => Trip::where('state_id', State::FINISHED)->count(),
-        ];
+            $tripsQuery = Trip::query();
+            $completedTripsQuery = Trip::where('state_id', State::FINISHED);
+            $activeTripsQuery = Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED]);
+
+            if ($startDate) {
+                $tripsQuery->where('created_at', '>=', $startDate);
+                $completedTripsQuery->where('created_at', '>=', $startDate);
+                $activeTripsQuery->where('created_at', '>=', $startDate);
+            }
+            if ($endDate) {
+                $tripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+                $completedTripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+                $activeTripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+            }
+
+            return [
+                'users' => User::withTrashed()->count(),
+                'drivers' => User::withTrashed()->where('rol_id', $driverRoleId)->count(),
+                'admins' => User::withTrashed()->where('rol_id', $adminRoleId)->count(),
+                'passengers' => User::withTrashed()->where('rol_id', $passengerRoleId)->count(),
+                'destinations' => Destination::withTrashed()->count(),
+                'vehicles' => \App\Models\Vehicle::count(),
+                'trips' => $tripsQuery->count(),
+                'active' => $activeTripsQuery->count(),
+                'completed' => $completedTripsQuery->count(),
+            ];
     }
 }

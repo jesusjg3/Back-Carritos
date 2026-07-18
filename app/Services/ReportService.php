@@ -14,45 +14,45 @@ class ReportService
         $this->reportRepo = $reportRepo;
     }
 
-    public function getDriversSummary(?string $search = null, ?int $perPage = null)
+    public function getDriversSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
     {
-        return $this->reportRepo->getDriversSummary($search, $perPage);
+        return $this->reportRepo->getDriversSummary($search, $perPage, $startDate, $endDate);
     }
 
     /**
      * Resumen de demanda por destinos (frecuencia de viajes completados).
      */
-    public function getDestinationsSummary(): array
+    public function getDestinationsSummary(?string $startDate = null, ?string $endDate = null): array
     {
-        $totalCompleted = $this->reportRepo->getCompletedTripsCount();
+        $totalCompleted = $this->reportRepo->getCompletedTripsCount($startDate, $endDate);
         $safeTotalCompleted = max($totalCompleted, 1);
 
-        return $this->reportRepo->getDestinationsSummary($safeTotalCompleted);
+        return $this->reportRepo->getDestinationsSummary($safeTotalCompleted, $startDate, $endDate);
     }
 
     /**
      * Resumen de viajes completados por hora del día (0-23).
      */
-    public function getHourlySummary(): array
+    public function getHourlySummary(?string $startDate = null, ?string $endDate = null): array
     {
-        return $this->reportRepo->getHourlySummary();
+        return $this->reportRepo->getHourlySummary($startDate, $endDate);
     }
 
     /**
      * Resumen de demanda de viajes por día de la semana (1 = Lunes, 7 = Domingo).
      */
-    public function getDailySummary(): array
+    public function getDailySummary(?string $startDate = null, ?string $endDate = null): array
     {
-        return $this->reportRepo->getDailySummary();
+        return $this->reportRepo->getDailySummary($startDate, $endDate);
     }
 
     /**
      * Distribución de puntuaciones (estrellas de 1 a 5) y comentarios recientes.
      */
-    public function getRatingsDistribution(): array
+    public function getRatingsDistribution(?string $startDate = null, ?string $endDate = null): array
     {
-        $distribution = $this->reportRepo->getRatingsDistribution();
-        $comments = $this->reportRepo->getRecentComments();
+        $distribution = $this->reportRepo->getRatingsDistribution($startDate, $endDate);
+        $comments = $this->reportRepo->getRecentComments($startDate, $endDate);
 
         return [
             'distribution' => $distribution,
@@ -63,28 +63,29 @@ class ReportService
     /**
      * Tiempos promedio de viaje y frecuencia agrupados por rutas comunes.
      */
-    public function getRoutesPerformance(): array
+    public function getRoutesPerformance(?string $startDate = null, ?string $endDate = null): array
     {
-        return $this->reportRepo->getRoutesPerformance();
+        return $this->reportRepo->getRoutesPerformance($startDate, $endDate);
     }
 
     /**
      * Resumen consolidado de todas las métricas de reportes en una sola consulta con caché.
      */
-    public function getAllSummary(): array
+    public function getAllSummary(?string $startDate = null, ?string $endDate = null): array
     {
-        return Cache::remember('reports_all_summary', 120, function () {
-            $totalCompleted = $this->reportRepo->getCompletedTripsCount();
+        $cacheKey = 'reports_all_summary_' . md5($startDate . '_' . $endDate);
+        return Cache::remember($cacheKey, 120, function () use ($startDate, $endDate) {
+            $totalCompleted = $this->reportRepo->getCompletedTripsCount($startDate, $endDate);
             $safeTotalCompleted = max($totalCompleted, 1);
 
-            $drivers = $this->reportRepo->getDriversSummary();
-            $destinations = $this->reportRepo->getDestinationsSummary($safeTotalCompleted);
-            $hourly = $this->reportRepo->getHourlySummary();
-            $daily = $this->reportRepo->getDailySummary();
-            $distribution = $this->reportRepo->getRatingsDistribution();
-            $comments = $this->reportRepo->getRecentComments();
-            $routes = $this->reportRepo->getRoutesPerformance();
-            $stats = $this->reportRepo->getDashboardStats();
+            $drivers = $this->reportRepo->getDriversSummary(null, null, $startDate, $endDate);
+            $destinations = $this->reportRepo->getDestinationsSummary($safeTotalCompleted, $startDate, $endDate);
+            $hourly = $this->reportRepo->getHourlySummary($startDate, $endDate);
+            $daily = $this->reportRepo->getDailySummary($startDate, $endDate);
+            $distribution = $this->reportRepo->getRatingsDistribution($startDate, $endDate);
+            $comments = $this->reportRepo->getRecentComments($startDate, $endDate);
+            $routes = $this->reportRepo->getRoutesPerformance($startDate, $endDate);
+            $stats = $this->reportRepo->getDashboardStats($startDate, $endDate);
 
             return [
                 'drivers' => $drivers,
@@ -104,10 +105,11 @@ class ReportService
     /**
      * Obtener estadísticas generales para el Dashboard del sistema con caché de 15 minutos.
      */
-    public function getDashboardStats(): array
+    public function getDashboardStats(?string $startDate = null, ?string $endDate = null): array
     {
-        return Cache::remember('dashboard_stats', 15, function () {
-            return $this->reportRepo->getDashboardStats();
+        $cacheKey = 'dashboard_stats_' . md5($startDate . '_' . $endDate);
+        return Cache::remember($cacheKey, 15, function () use ($startDate, $endDate) {
+            return $this->reportRepo->getDashboardStats($startDate, $endDate);
         });
     }
 }

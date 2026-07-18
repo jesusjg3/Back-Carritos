@@ -13,10 +13,12 @@ use App\Events\TripLocationUpdated;
 class DriverLocationService
 {
     protected DriverLocationRepository $locationRepo;
+    protected TripRepository $tripRepo;
 
-    public function __construct(DriverLocationRepository $locationRepo)
+    public function __construct(DriverLocationRepository $locationRepo, TripRepository $tripRepo)
     {
         $this->locationRepo = $locationRepo;
+        $this->tripRepo = $tripRepo;
     }
 
     /**
@@ -45,9 +47,7 @@ class DriverLocationService
         ));
 
         // Si el conductor tiene un viaje activo (aceptado o iniciado), emitir evento al pasajero
-        $activeTrip = Trip::where('driver_id', $user->id)
-            ->whereIn('state_id', [State::ACCEPTED, State::STARTED])
-            ->first();
+        $activeTrip = $this->tripRepo->getActiveTripForDriver($user->id);
 
         if ($activeTrip) {
             $status = ($activeTrip->state_id === State::ACCEPTED) ? 'accepted' : 'started';
@@ -67,9 +67,9 @@ class DriverLocationService
     /**
      * Obtiene conductores cercanos
      */
-    public function getNearbyDrivers(float $latitude, float $longitude, float $radius = 5)
+    public function getNearbyDrivers(float $latitude, float $longitude, ?float $radius = null)
     {
-        // Obtener colección del repositorio
+        $radius = $radius ?? (float) env('DRIVER_SEARCH_RADIUS_KM', 5);
         $locations = $this->locationRepo->getNearbyOnlineDrivers($latitude, $longitude, $radius);
 
         // Transformar datos para la respuesta (DTO o Array simple)

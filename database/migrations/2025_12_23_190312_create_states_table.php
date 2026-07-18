@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('states', function (Blueprint $table) {
             $table->id();
-            $table->string('state_name'); //solicitado, aceptado, en_curso, finalizado, cancelado
+            $table->string('state_name')->unique(); //solicitado, aceptado, en_curso, finalizado, cancelado
             $table->timestamps();
             $table->softDeletes();
         });

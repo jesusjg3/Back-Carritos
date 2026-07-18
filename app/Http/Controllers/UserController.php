@@ -21,9 +21,9 @@ class UserController extends Controller
         $search = $request->query('search');
         $roleId = $request->query('role_id');
         $roleName = $request->query('role_name');
-        $isActive = $request->has('is_active') ? $request->boolean('is_active') : null;
+        $status = $request->query('status');
 
-        $users = $this->userService->listUsers($perPage, $search, $roleId, $isActive, $roleName);
+        $users = $this->userService->listUsers($perPage, $search, $roleId, $status, $roleName);
 
         return response()->json($users);
     }

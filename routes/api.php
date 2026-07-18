@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\StateController;
-use App\Http\Controllers\TabsController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\TripPositionController;
@@ -26,6 +25,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/refresh', [AuthController::class, 'refresh']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::post('/devices', [\App\Http\Controllers\DeviceController::class, 'store']);
+
     Route::middleware('is_active')->group(function () {
         // Rutas Exclusivas para el Administrador
         Route::middleware('role:admin')->group(function () {
@@ -47,7 +48,8 @@ Route::middleware('auth:api')->group(function () {
 
             Route::apiResource('rols', RolController::class);
             Route::apiResource('states', StateController::class);
-            Route::apiResource('tabs', TabsController::class);
+            Route::apiResource('vehicles', \App\Http\Controllers\VehicleController::class);
+            Route::patch('/vehicles/{id}/toggle-status', [\App\Http\Controllers\VehicleController::class, 'toggleStatus']);
             Route::post('/destinations', [DestinationController::class, 'store']);
             Route::put('/destinations/{id}', [DestinationController::class, 'update']);
             Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
@@ -58,6 +60,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/trips/request', [TripController::class, 'request']);
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
         Route::post('/trips/{id}/start', [TripController::class, 'start']);
+        Route::post('/trips/{tripId}/board/{passengerId}', [TripController::class, 'boardPassenger']);
+        Route::post('/trips/{tripId}/dropoff/{passengerId}', [TripController::class, 'dropOffPassenger']);
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
         Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);

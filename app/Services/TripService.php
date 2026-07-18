@@ -7,16 +7,19 @@ use App\Models\Trip;
 use App\Models\User;
 use App\Models\State;
 use Illuminate\Support\Facades\DB;
+use App\Models\TripPassenger;
 
 class TripService
 {
     protected TripRepository $tripRepo;
     protected StatesService $statesService;
+    protected ExpoPushService $pushService;
 
-    public function __construct(TripRepository $tripRepo, StatesService $statesService)
+    public function __construct(TripRepository $tripRepo, StatesService $statesService, ExpoPushService $pushService)
     {
         $this->tripRepo = $tripRepo;
         $this->statesService = $statesService;
+        $this->pushService = $pushService;
     }
 
     public function getAllStates()
@@ -24,164 +27,228 @@ class TripService
         return $this->statesService->getAllStates();
     }
 
-    public function getAllAdminTrips(int $perPage = 10)
+    public function getAllAdminTrips(int $perPage = 10, ?string $search = null, ?string $stateName = null)
     {
-        return $this->tripRepo->getAllWithRelations($perPage);
+        return $this->tripRepo->getAllWithRelations($perPage, $search, $stateName);
     }
 
-    /**
-     * Usuario solicita carrera
-     */
     public function requestTrip(array $data, User $user)
     {
         return DB::transaction(function () use ($data, $user) {
+            
+            // Buscar viajes activos compartidos
+            $activeTrips = $this->tripRepo->findActiveTripsForRoute($data['destination_address'], $data['passengers_count'] ?? 1);
+            
+            if ($activeTrips->isNotEmpty()) {
+                $trip = $activeTrips->first();
+                
+                $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested');
+                
+                $trip->load(['passengers', 'driver', 'state']);
+                
+                broadcast(new \App\Events\NewTripRequest($trip));
+                return $this->formatTripResponse($trip);
+            }
 
+            // Crear uno nuevo si no hay compatibles
             $trip = $this->tripRepo->create(array_merge($data, [
-                'passenger_id' => $user->id,
                 'state_id' => State::REQUESTED,
             ]));
+            
+            $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested');
 
-            $trip->load(['passenger', 'driver', 'state']);
-
-            // Broadcast event to drivers
+            $trip->load(['passengers', 'driver', 'state']);
             broadcast(new \App\Events\NewTripRequest($trip));
 
             return $this->formatTripResponse($trip);
         });
     }
-    /**
-     * Conductor acepta carrera (with Race Condition protection)
-     */
-    public function acceptTripById(int $tripId, User $driver)
+
+    public function acceptTripById(int $tripId, User $driver, ?int $passengerId = null)
     {
-        return DB::transaction(function () use ($tripId, $driver) {
-            // 1. LOCK the row for update
+        return DB::transaction(function () use ($tripId, $driver, $passengerId) {
             $trip = $this->tripRepo->findLocked($tripId);
 
-            // 2. Critical Validation
-            if ($trip->state_id !== State::REQUESTED || $trip->driver_id !== null) {
-                // Return a specific structure or throw an exception that Controller catches as 409
+            if ($trip->driver_id !== null && $trip->driver_id !== $driver->id) {
                 throw new \Exception('El viaje ya fue tomado por otro conductor.', 409);
             }
 
-            // 3. Assign Driver
-            $this->tripRepo->update($trip, [
-                'driver_id' => $driver->id,
-                'state_id' => State::ACCEPTED,
-            ]);
+            if ($trip->driver_id === null) {
+                $this->tripRepo->update($trip, [
+                    'driver_id' => $driver->id,
+                    'state_id' => State::ACCEPTED,
+                    'accepted_at' => now(),
+                ]);
+            }
+            
+            if ($passengerId) {
+                $this->tripRepo->updatePassengerStatus($tripId, $passengerId, 'accepted');
+            } else {
+                $this->tripRepo->updateAllPassengersStatus($tripId, 'requested', 'accepted');
+            }
 
-            $trip->load(['passenger', 'driver', 'state']);
+            $trip->load(['passengers', 'driver', 'state']);
 
-            // 4. Broadcast that trip is taken to drivers (remove from list)
             broadcast(new \App\Events\TripTaken($trip));
-
-            // 5. Broadcast to specific passenger that trip is accepted
             broadcast(new \App\Events\TripAccepted($trip));
+
+            // Notify passengers
+            foreach ($trip->passengers as $p) {
+                $this->pushService->sendToUser(
+                    $p->id,
+                    "Viaje Aceptado",
+                    "El conductor {$driver->name} ha aceptado tu viaje."
+                );
+            }
 
             return $this->formatTripResponse($trip);
         });
     }
 
-    /**
-     * Deprecated method kept for compatibility if needed, but redirects to new logic if possible
-     * or acts as simple wrapper.Ideally should be removed or updated.
-     */
     public function acceptTrip(Trip $trip, User $driver)
     {
         return $this->acceptTripById($trip->id, $driver);
     }
 
-    /**
-     * Iniciar carrera (Recoger al pasajero)
-     */
-    public function startTrip(Trip $trip, User $user)
+    public function startTrip(int $tripId, User $user)
     {
+        $trip = $this->tripRepo->find($tripId);
+        
         if ($trip->driver_id !== $user->id) {
             throw new \Exception('No autorizado para iniciar este viaje.', 403);
         }
 
-        // Idempotency: If already started, just return the trip
         if ($trip->state_id === State::STARTED) {
-            $trip->load(['passenger', 'driver', 'state']);
+            $trip->load(['passengers', 'driver', 'state']);
             return $this->formatTripResponse($trip);
-        }
-
-        if ($trip->state_id !== State::ACCEPTED) {
-            throw new \Exception('El viaje debe estar aceptado para iniciarse.', 400);
         }
 
         $trip = $this->tripRepo->update($trip, [
             'state_id' => State::STARTED,
+            'started_at' => now(),
         ]);
 
-        $trip->load(['passenger', 'driver', 'state']);
-
-        // Broadcast to passenger
+        $trip->load(['passengers', 'driver', 'state']);
         broadcast(new \App\Events\TripStarted($trip));
+
+        // Notify passengers
+        foreach ($trip->passengers as $p) {
+            $this->pushService->sendToUser(
+                $p->id,
+                "Viaje Iniciado",
+                "El conductor ha iniciado la ruta hacia el destino."
+            );
+        }
 
         return $this->formatTripResponse($trip);
     }
-
-    /**
-     * Finalizar carrera
-     */
-    public function finishTrip(Trip $trip, User $user)
+    
+    public function boardPassenger(int $tripId, int $passengerId, User $driver)
     {
+        $trip = $this->tripRepo->find($tripId);
+        
+        if ($trip->driver_id !== $driver->id) {
+            throw new \Exception('No autorizado.', 403);
+        }
+        
+        $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, 'boarded');
+            
+        $trip->load(['passengers', 'driver', 'state']);
+        return $this->formatTripResponse($trip);
+    }
+
+    public function dropOffPassenger(int $tripId, int $passengerId, User $driver)
+    {
+        $trip = $this->tripRepo->find($tripId);
+        
+        if ($trip->driver_id !== $driver->id) {
+            throw new \Exception('No autorizado.', 403);
+        }
+        
+        $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, 'dropped_off');
+            
+        $trip->load(['passengers', 'driver', 'state']);
+        return $this->formatTripResponse($trip);
+    }
+
+    public function finishTrip(int $tripId, User $user)
+    {
+        $trip = $this->tripRepo->find($tripId);
+        
         if ($trip->driver_id !== $user->id) {
             throw new \Exception('No autorizado para finalizar este viaje.', 403);
         }
 
         $trip = $this->tripRepo->update($trip, [
             'state_id' => State::FINISHED,
+            'finished_at' => now(),
         ]);
+        
+        $this->tripRepo->updateAllPassengersStatus($trip->id, 'boarded', 'dropped_off');
 
-        $trip->load(['passenger', 'driver', 'state']);
-
-        // Broadcast to passenger
+        $trip->load(['passengers', 'driver', 'state']);
         broadcast(new \App\Events\TripFinished($trip));
+
+        foreach ($trip->passengers as $p) {
+            $this->pushService->sendToUser(
+                $p->id,
+                "Viaje Finalizado",
+                "Has llegado a tu destino. ¡Gracias por usar Carritos!"
+            );
+        }
 
         return $this->formatTripResponse($trip);
     }
 
-    /**
-     * Cancelar carrera
-     */
     public function cancelTrip(int $tripId, User $user)
     {
         return DB::transaction(function () use ($tripId, $user) {
             $trip = $this->tripRepo->findLocked($tripId);
 
-            // Allow cancellation if not already finished or cancelled
             if ($trip->state_id === State::FINISHED || $trip->state_id === State::CANCELLED) {
-                return $this->formatTripResponse($trip); // Already done
+                return $this->formatTripResponse($trip);
             }
 
-            // Ensure rol relationship is loaded
             if (!$user->relationLoaded('rol')) {
                 $user->load('rol');
             }
             $roleName = $user->rol->rol_name;
 
-            // If user is passenger, verify ownership
-            if ($roleName === 'pasajero' && $trip->passenger_id !== $user->id) {
-                throw new \Exception('No autorizado para cancelar este viaje.', 403);
+            if ($roleName === 'pasajero') {
+                $this->tripRepo->updatePassengerStatus($tripId, $user->id, 'cancelled');
+                    
+                $activePassengers = $this->tripRepo->getActivePassengersCount($tripId);
+                    
+                if ($activePassengers === 0) {
+                    $this->tripRepo->update($trip, ['state_id' => State::CANCELLED]);
+                }
+            } else if ($roleName === 'conductor') {
+                if ($trip->driver_id !== $user->id) {
+                    throw new \Exception('No autorizado para cancelar este viaje.', 403);
+                }
+                
+                $this->tripRepo->update($trip, ['state_id' => State::CANCELLED]);
+                $this->tripRepo->cancelAllPassengers($tripId);
             }
 
-            // If user is driver, verify assignment
-            if ($roleName === 'conductor' && $trip->driver_id !== $user->id) {
-                throw new \Exception('No autorizado para cancelar este viaje.', 403);
-            }
-
-            $currentStatus = $trip->state_id;
-
-            $this->tripRepo->update($trip, [
-                'state_id' => State::CANCELLED,
-            ]);
-
-            $trip->load(['passenger', 'driver', 'state']);
-
-            // Broadcast Cancellation
+            $trip->load(['passengers', 'driver', 'state']);
             broadcast(new \App\Events\TripCancelled($trip));
+
+            if ($roleName === 'pasajero' && $trip->driver_id) {
+                $this->pushService->sendToUser(
+                    $trip->driver_id,
+                    "Viaje Cancelado",
+                    "Un pasajero ha cancelado su solicitud."
+                );
+            } else if ($roleName === 'conductor') {
+                foreach ($trip->passengers as $p) {
+                    $this->pushService->sendToUser(
+                        $p->id,
+                        "Viaje Cancelado",
+                        "El conductor ha cancelado el viaje."
+                    );
+                }
+            }
 
             return $this->formatTripResponse($trip);
         });
@@ -189,7 +256,6 @@ class TripService
 
     private function formatTripResponse(Trip $trip): array
     {
-        // Obtener ubicación del conductor desde el repositorio
         $driverLocation = null;
         if ($trip->driver_id) {
             $driverLocation = $this->tripRepo->getDriverLocation($trip->driver_id);
@@ -211,20 +277,24 @@ class TripService
                 'id' => $trip->state->id,
                 'name' => $trip->state->state_name
             ] : null,
-            'passenger' => $trip->passenger ? [
-                'name' => $trip->passenger->name
-            ] : null,
+            'passengers' => $trip->passengers->map(function ($passenger) {
+                return [
+                    'id' => $passenger->id,
+                    'name' => $passenger->name,
+                    'phone' => $passenger->phone,
+                    'status' => $passenger->pivot->status ?? 'requested',
+                ];
+            })->toArray(),
             'driver' => $trip->driver ? [
                 'id' => $trip->driver->id,
                 'name' => $trip->driver->name,
-                'rating' => $trip->driver->score ?? 5.0,
-                'score' => $trip->driver->score ?? 5.0,
-                'rating_count' => $trip->driver->rating_count ?? 0,
-                // Coordenadas actuales del conductor (si existen)
+                'phone' => $trip->driver->phone,
+                'rating' => $trip->driver->ratingProfile->score ?? 5.0,
+                'score' => $trip->driver->ratingProfile->score ?? 5.0,
+                'rating_count' => $trip->driver->ratingProfile->rating_count ?? 0,
                 'latitude' => $driverLocation['latitude'] ?? null,
                 'longitude' => $driverLocation['longitude'] ?? null,
                 'last_update' => $driverLocation['last_update'] ?? null,
-                // Estructura completa para compatibilidad
                 'location' => $driverLocation,
             ] : null,
         ];
@@ -235,7 +305,6 @@ class TripService
         $trips = $this->tripRepo->getByPassenger($user->id);
         $trips->load(['driver', 'state']);
 
-        // Eager load only the rating where emitter is the user
         $trips->load([
             'ratings' => function ($query) use ($user) {
                 $query->where('emitter_id', $user->id);

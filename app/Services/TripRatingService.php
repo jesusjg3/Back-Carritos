@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Trip;
 use App\Models\User;
 use App\Models\TripRating;
+use App\Models\UserRating;
 use App\Repositories\TripRatingRepository;
 use App\Repositories\TripRepository;
 use App\Repositories\UserRepository;
@@ -30,7 +31,8 @@ class TripRatingService
         int $tripId,
         User $fromUser,
         int $score,
-        ?string $comment = null
+        ?string $comment = null,
+        ?int $receiverId = null
     ): array {
         $trip = $this->tripRepo->find($tripId);
 
@@ -39,17 +41,26 @@ class TripRatingService
         }
 
         // Determine receiver
-        if ($fromUser->id === $trip->passenger_id) {
+        if ($fromUser->id === $trip->driver_id) {
+            // Emisor es conductor, receptor es pasajero
+            if (!$receiverId) {
+                throw new \Exception("Debe especificar a qué pasajero calificar.");
+            }
+            $isPassenger = $trip->passengers->contains('id', $receiverId);
+            if (!$isPassenger) {
+                throw new \Exception("El usuario especificado no es pasajero de este viaje.");
+            }
+            $toUser = $this->userRepo->find($receiverId);
+        } else {
             // Emisor es pasajero, receptor es conductor
+            $isPassenger = $trip->passengers->contains('id', $fromUser->id);
+            if (!$isPassenger) {
+                throw new \Exception("El usuario no pertenece a esta carrera.");
+            }
             if (!$trip->driver_id) {
                 throw new \Exception("Esta carrera no tiene conductor asignado.");
             }
             $toUser = $this->userRepo->find($trip->driver_id);
-        } elseif ($fromUser->id === $trip->driver_id) {
-            // Emisor es conductor, receptor es pasajero
-            $toUser = $this->userRepo->find($trip->passenger_id);
-        } else {
-            throw new \Exception("El usuario no pertenece a esta carrera.");
         }
 
         if ($score < 1 || $score > 5) {
@@ -64,22 +75,21 @@ class TripRatingService
             'comment' => $comment,
         ]);
 
-        // Recalculate average rating for the receiver
-        $toUser = $this->userRepo->find($toUser->id); // Ensure fresh data
-        $currentScore = $toUser->score ?: 5.0; // Default to 5.0 if null
-        $currentCount = $toUser->rating_count ?: 0;
+        $ratingProfile = $this->userRepo->getRatingProfile($toUser->id);
+        $currentScore = (float) $ratingProfile->score;
+        $currentCount = (int) $ratingProfile->rating_count;
 
-        // Formula: ((Avg * Count) + NewScore) / (Count + 1)
-        if ($currentCount == 0) {
+        if ($currentCount === 0) {
             $newScore = (float) $score;
         } else {
             $newScore = (($currentScore * $currentCount) + $score) / ($currentCount + 1);
         }
 
-        $this->userRepo->update($toUser->id, [
-            'score' => round($newScore, 2),
-            'rating_count' => $currentCount + 1
-        ]);
+        $this->userRepo->updateRatingProfile(
+            $toUser->id, 
+            round($newScore, 2), 
+            $currentCount + 1
+        );
 
         return [
             'id' => $rating->id,

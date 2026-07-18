@@ -26,7 +26,18 @@ class DestinationController extends Controller
         } elseif ($request->has('per_page')) {
             $perPage = $request->integer('per_page', 10);
             $search = $request->query('search');
-            $destinations = $this->destinationService->getPaginatedAdminDestinations($perPage, $search);
+            
+            $isActive = null;
+            if ($request->has('is_active')) {
+                $isActiveStr = $request->query('is_active');
+                if ($isActiveStr === 'true' || $isActiveStr === '1') {
+                    $isActive = true;
+                } elseif ($isActiveStr === 'false' || $isActiveStr === '0') {
+                    $isActive = false;
+                }
+            }
+            
+            $destinations = $this->destinationService->getPaginatedAdminDestinations($perPage, $search, $isActive);
         } else {
             if ($user && $user->rol_id === 1) {
                 $destinations = $this->destinationService->getAllAdminDestinations();

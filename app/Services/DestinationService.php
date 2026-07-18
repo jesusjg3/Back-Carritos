@@ -23,9 +23,9 @@ class DestinationService
         return $this->destinationRepo->allIncludeInactive();
     }
 
-    public function getPaginatedAdminDestinations(int $perPage, ?string $search = null)
+    public function getPaginatedAdminDestinations(int $perPage, ?string $search = null, ?bool $isActive = null)
     {
-        return $this->destinationRepo->paginateAdminDestinations($perPage, $search);
+        return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $isActive);
     }
 
     public function getDestinationById(int $id)

@@ -16,7 +16,7 @@ class DestinationRepository
         return Destination::withTrashed()->get();
     }
 
-    public function paginateAdminDestinations(int $perPage, ?string $search = null)
+    public function paginateAdminDestinations(int $perPage, ?string $search = null, ?bool $isActive = null)
     {
         $query = Destination::withTrashed();
 
@@ -26,6 +26,15 @@ class DestinationRepository
                     ->orWhere('description', 'ilike', "%{$search}%")
                     ->orWhere('address', 'ilike', "%{$search}%");
             });
+        }
+
+        if ($isActive !== null) {
+            $query->where('is_active', $isActive);
+            if (!$isActive) {
+                $query->whereNotNull('deleted_at');
+            } else {
+                $query->whereNull('deleted_at');
+            }
         }
 
         return $query->paginate($perPage);

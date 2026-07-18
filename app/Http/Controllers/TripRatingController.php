@@ -25,7 +25,8 @@ class TripRatingController extends Controller
                 $tripId,
                 Auth::user(),
                 $request->input('score'),
-                $request->input('comment')
+                $request->input('comment'),
+                $request->input('receiver_id')
             );
             return response()->json($rating, 201);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

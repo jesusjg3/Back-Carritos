@@ -16,8 +16,10 @@ Broadcast::channel('passenger.{id}', function ($user, $id) {
 
 Broadcast::channel('trip.{tripId}', function ($user, $tripId) {
     $trip = Trip::find($tripId);
-    // Autorizar solo al pasajero o conductor de ese viaje específico
-    return $trip && ($trip->passenger_id === $user->id || $trip->driver_id === $user->id);
+    if (!$trip) return false;
+    
+    $isPassenger = $trip->passengers()->where('users.id', $user->id)->exists();
+    return $isPassenger || $trip->driver_id === $user->id;
 });
 
 // Admin Radar en Vivo
