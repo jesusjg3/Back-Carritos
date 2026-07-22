@@ -5,58 +5,14 @@ namespace App\Services;
 use App\Models\UserDevice;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Google\Auth\Credentials\ServiceAccountCredentials;
-use Illuminate\Support\Facades\Cache;
 
 class PushNotificationService
 {
-    protected $credentialsPath;
-    protected $projectId;
-
-    public function __construct()
-    {
-        $this->credentialsPath = storage_path('app/firebase_credentials.json');
-        
-        if (file_exists($this->credentialsPath)) {
-            $credentialsData = json_decode(file_get_contents($this->credentialsPath), true);
-            $this->projectId = $credentialsData['project_id'] ?? null;
-        } else {
-            Log::warning('Firebase credentials file not found at: ' . $this->credentialsPath);
-        }
-    }
-
     /**
-     * Obtiene el Access Token de OAuth2 para FCM usando google/auth.
-     */
-    protected function getAccessToken()
-    {
-        return Cache::remember('fcm_access_token', 3500, function () {
-            try {
-                $credentials = new ServiceAccountCredentials(
-                    ['https://www.googleapis.com/auth/firebase.messaging'],
-                    $this->credentialsPath
-                );
-                
-                $token = $credentials->fetchAuthToken();
-                
-                return $token['access_token'] ?? null;
-            } catch (\Exception $e) {
-                Log::error('Error generating FCM Auth Token: ' . $e->getMessage());
-                return null;
-            }
-        });
-    }
-
-    /**
-     * Send a notification to a specific user using FCM HTTP v1 API.
+     * Send a notification to a specific user using Expo Push API.
      */
     public function sendToUser(int $userId, string $title, string $body, array $data = [])
     {
-        if (!file_exists($this->credentialsPath) || !$this->projectId) {
-            Log::warning('Firebase credentials missing or invalid. Cannot send notification.');
-            return false;
-        }
-
         $devices = UserDevice::where('user_id', $userId)->where('is_active', true)->get();
 
         if ($devices->isEmpty()) {
@@ -64,52 +20,58 @@ class PushNotificationService
         }
 
         $tokens = $devices->pluck('fcm_token')->toArray();
-        $accessToken = $this->getAccessToken();
+        $success = true;
 
-        if (!$accessToken) {
-            Log::error('Could not get FCM Access Token.');
+        $messages = [];
+        foreach ($tokens as $token) {
+            // Validamos que el token tenga el formato correcto de Expo
+            if (strpos($token, 'ExponentPushToken') === false && strpos($token, 'ExpoPushToken') === false) {
+                Log::warning("Token inválido para Expo Push: {$token}");
+                continue;
+            }
+
+            $messages[] = [
+                'to' => $token,
+                'sound' => 'default',
+                'title' => $title,
+                'body' => $body,
+                'data' => empty($data) ? (object)[] : $data,
+                'channelId' => 'default', // Asegurarse que coincida con el channel del app.json/frontend
+            ];
+        }
+
+        if (empty($messages)) {
             return false;
         }
 
-        $success = true;
+        try {
+            $response = Http::post('https://exp.host/--/api/v2/push/send', $messages);
 
-        foreach ($tokens as $token) {
-            $message = [
-                'message' => [
-                    'token' => $token,
-                    'notification' => [
-                        'title' => $title,
-                        'body' => $body,
-                    ],
-                    'data' => empty($data) ? (object)[] : $data, // Must be an object or string dictionary
-                    'android' => [
-                        'notification' => [
-                            'sound' => 'default',
-                            'channel_id' => 'default',
-                        ]
-                    ]
-                ]
-            ];
-
-            try {
-                $response = Http::withToken($accessToken)
-                    ->post("https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send", $message);
-
-                if ($response->failed()) {
-                    Log::error("FCM Send Error for token {$token}: " . $response->body());
-                    
-                    // Si el token es inválido o no está registrado, lo borramos
-                    $errorData = $response->json('error');
-                    if (isset($errorData['details'][0]['errorCode']) && 
-                       in_array($errorData['details'][0]['errorCode'], ['UNREGISTERED', 'INVALID_ARGUMENT'])) {
-                        UserDevice::where('fcm_token', $token)->delete();
-                    }
-                    $success = false;
-                }
-            } catch (\Exception $e) {
-                Log::error('Error sending push notification (HTTP): ' . $e->getMessage());
+            if ($response->failed()) {
+                Log::error("Expo Push Send Error: " . $response->body());
                 $success = false;
+            } else {
+                // Expo devuelve un array de "tickets" para cada mensaje
+                $responseData = $response->json('data');
+                
+                if (is_array($responseData)) {
+                    foreach ($responseData as $index => $ticket) {
+                        if (isset($ticket['status']) && $ticket['status'] === 'error') {
+                            $errorCode = $ticket['details']['error'] ?? 'Unknown Error';
+                            Log::error("Expo Push Error para el token {$messages[$index]['to']}: {$errorCode}");
+                            
+                            // Si el token ya no es válido, lo borramos
+                            if ($errorCode === 'DeviceNotRegistered') {
+                                UserDevice::where('fcm_token', $messages[$index]['to'])->delete();
+                            }
+                            $success = false;
+                        }
+                    }
+                }
             }
+        } catch (\Exception $e) {
+            Log::error('Error enviando push notification (Expo): ' . $e->getMessage());
+            $success = false;
         }
 
         return $success;

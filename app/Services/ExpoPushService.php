@@ -21,13 +21,25 @@ class ExpoPushService
 
         $messages = [];
         foreach ($devices as $device) {
+            $token = $device->fcm_token;
+            
+            if (strpos($token, 'ExponentPushToken') === false && strpos($token, 'ExpoPushToken') === false) {
+                Log::warning("Token inválido para Expo Push en ExpoPushService: {$token}");
+                continue;
+            }
+
             $messages[] = [
-                'to' => $device->fcm_token, // This actually stores the ExpoPushToken
+                'to' => $token,
                 'sound' => 'default',
                 'title' => $title,
                 'body' => $body,
                 'data' => empty($data) ? (object)[] : $data,
+                'channelId' => 'default',
             ];
+        }
+
+        if (empty($messages)) {
+            return false;
         }
 
         try {

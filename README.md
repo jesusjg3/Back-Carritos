@@ -108,6 +108,13 @@ Use these accounts to log in after running the seeders:
 El backend incluye una doble validación de ubicación para evitar que usuarios soliciten viajes fuera de la universidad. 
 - **Validación Backend:** En `StoreTripRequest`, la fórmula de Haversine valida estrictamente que la latitud y longitud de origen del pasajero se encuentren dentro de un **radio de 1.5 kilómetros** del punto central del campus. Si el viaje se origina fuera de este límite, el servidor rechaza la petición con un error HTTP 422.
 
+### Notificaciones Push (Expo)
+El backend utiliza la API HTTP v2 de Expo para enviar notificaciones Push a los dispositivos de los usuarios (cuando un viaje es solicitado, aceptado, iniciado o finalizado).
+- **Servicio Principal:** `app/Services/ExpoPushService.php`.
+- Este servicio recoge el token de FCM del usuario desde la tabla `user_devices` y envía un request POST a `https://exp.host/--/api/v2/push/send`.
+- Para que las notificaciones lleguen correctamente a la app de Android cuando está en segundo plano (minimizada), se asegura de inyectar el parámetro `"channelId" => "default"` en el payload enviado a Expo.
+- **Requiere:** Que el frontend tenga correctamente cargado su `Service Account Key` en la página de credenciales de [expo.dev](https://expo.dev) (para permitir a Expo hablar con los servidores de Google FCM).
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

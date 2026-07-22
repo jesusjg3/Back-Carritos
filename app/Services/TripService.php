@@ -42,7 +42,18 @@ class TripService
             if ($activeTrips->isNotEmpty()) {
                 $trip = $activeTrips->first();
                 
-                $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested');
+                // Verificar si el usuario ya está en este viaje
+                $existingPassenger = TripPassenger::where('trip_id', $trip->id)
+                    ->where('passenger_id', $user->id)
+                    ->first();
+
+                if (!$existingPassenger) {
+                    $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested');
+                } else if ($existingPassenger->status === 'cancelled') {
+                    $this->tripRepo->updatePassengerStatus($trip->id, $user->id, 'requested');
+                }
+                // Si ya está como 'requested', 'accepted', etc., no hacemos insert, 
+                // simplemente reenviamos el evento para que los conductores lo vuelvan a ver.
                 
                 $trip->load(['passengers', 'driver', 'state']);
                 
