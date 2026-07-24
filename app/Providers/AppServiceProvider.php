@@ -4,6 +4,13 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+use App\Models\User;
+use App\Observers\UserObserver;
+use App\Models\Trip;
+use App\Observers\TripObserver;
+use App\Models\Destination;
+use App\Observers\DestinationObserver;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -19,7 +26,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        User::observe(UserObserver::class);
+        Trip::observe(TripObserver::class);
+        Destination::observe(DestinationObserver::class);
     }
 }
 

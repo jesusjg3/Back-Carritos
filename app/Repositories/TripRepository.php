@@ -155,6 +155,13 @@ class TripRepository
         ]);
     }
 
+    public function getPassengerInTrip(int $tripId, int $passengerId)
+    {
+        return TripPassenger::where('trip_id', $tripId)
+            ->where('passenger_id', $passengerId)
+            ->first();
+    }
+
     public function updatePassengerStatus(int $tripId, int $passengerId, string $status)
     {
         return TripPassenger::where('trip_id', $tripId)

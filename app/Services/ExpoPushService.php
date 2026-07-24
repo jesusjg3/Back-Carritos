@@ -21,7 +21,7 @@ class ExpoPushService
 
         $messages = [];
         foreach ($devices as $device) {
-            $token = $device->fcm_token;
+            $token = $device->expo_token;
             
             if (strpos($token, 'ExponentPushToken') === false && strpos($token, 'ExpoPushToken') === false) {
                 Log::warning("Token inválido para Expo Push en ExpoPushService: {$token}");
@@ -58,7 +58,7 @@ class ExpoPushService
                     if (isset($result['status']) && $result['status'] === 'error') {
                         if (isset($result['details']['error']) && $result['details']['error'] === 'DeviceNotRegistered') {
                             $invalidToken = $messages[$index]['to'];
-                            UserDevice::where('fcm_token', $invalidToken)->delete();
+                            UserDevice::where('expo_token', $invalidToken)->delete();
                         }
                     }
                 }

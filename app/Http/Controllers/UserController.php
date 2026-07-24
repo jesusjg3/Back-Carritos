@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAdminRequest;
+use App\Http\Requests\StoreDriverRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,32 +31,20 @@ class UserController extends Controller
         return response()->json($users);
     }
 
-    public function storeDriver(Request $request): JsonResponse
+    public function storeDriver(StoreDriverRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
-            'password' => 'required|string|min:8',
-        ]);
-
         try {
-            $driver = $this->userService->createDriver($request->all());
+            $driver = $this->userService->createDriver($request->validated());
             return response()->json($driver, 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 
-    public function storeAdmin(Request $request): JsonResponse
+    public function storeAdmin(StoreAdminRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
-            'password' => 'required|string|min:8',
-        ]);
-
         try {
-            $admin = $this->userService->createAdmin($request->all());
+            $admin = $this->userService->createAdmin($request->validated());
             return response()->json($admin, 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -63,7 +54,7 @@ class UserController extends Controller
     public function toggleStatus(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->toggleUserStatus($id);
+            $user = $this->userService->toggleUserStatus($id, auth('api')->id());
             return response()->json([
                 'message' => 'Estado del usuario actualizado',
                 'user' => $user
@@ -73,17 +64,10 @@ class UserController extends Controller
         }
     }
 
-    public function updateUser(Request $request, int $id): JsonResponse
+    public function updateUser(UpdateUserRequest $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id . ',id,deleted_at,NULL',
-            'rol_id' => 'sometimes|integer|exists:rols,id',
-            'password' => 'sometimes|nullable|string|min:8',
-        ]);
-
         try {
-            $user = $this->userService->updateUser($id, $validated);
+            $user = $this->userService->updateUser($id, $request->validated());
             return response()->json([
                 'message' => 'Usuario actualizado correctamente',
                 'user' => $user
@@ -96,7 +80,7 @@ class UserController extends Controller
     public function deleteUser(int $id): JsonResponse
     {
         try {
-            $this->userService->deleteUser($id);
+            $this->userService->deleteUser($id, auth('api')->id());
             return response()->json([
                 'message' => 'Usuario eliminado correctamente'
             ]);

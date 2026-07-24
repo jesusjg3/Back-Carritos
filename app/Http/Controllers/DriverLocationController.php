@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LocationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -9,6 +10,12 @@ use Illuminate\Support\Facades\Cache;
 class DriverLocationController extends Controller
 {
     private const ACTIVE_DRIVER_IDS_KEY = 'drivers.live.ids';
+    protected LocationService $locationService;
+
+    public function __construct(LocationService $locationService)
+    {
+        $this->locationService = $locationService;
+    }
 
     public function updateDriverLocation(Request $request): JsonResponse
     {
@@ -36,6 +43,25 @@ class DriverLocationController extends Controller
         Cache::put($this->driverOnlineKey($driverId), true, now()->addMinutes(30));
         $this->rememberDriverId($driverId);
 
+        // Emitir evento para WebSockets
+        broadcast(new \App\Events\DriverGlobalLocationUpdated($driverId, (float) $data['latitude'], (float) $data['longitude']));
+
+        // Si el conductor tiene un viaje activo (aceptado o iniciado), emitir evento al pasajero
+        $activeTrip = \App\Models\Trip::where('driver_id', $driverId)
+            ->whereIn('state_id', [\App\Models\State::ACCEPTED, \App\Models\State::STARTED])
+            ->first();
+
+        if ($activeTrip) {
+            $status = ($activeTrip->state_id === \App\Models\State::ACCEPTED) ? 'accepted' : 'started';
+            broadcast(new \App\Events\TripLocationUpdated(
+                $activeTrip->id,
+                $driverId,
+                (float) $data['latitude'],
+                (float) $data['longitude'],
+                $status
+            ));
+        }
+
         return response()->json([
             'message' => 'Ubicación actualizada',
             'driver' => $payload,
@@ -54,6 +80,9 @@ class DriverLocationController extends Controller
         Cache::forget($this->driverLocationKey($driverId));
         Cache::forget($this->driverOnlineKey($driverId));
         $this->forgetDriverId($driverId);
+
+        // Emitir evento para desconectar al conductor inmediatamente
+        broadcast(new \App\Events\DriverOffline($driverId));
 
         return response()->json(['message' => 'Conductor marcado como offline']);
     }
@@ -78,7 +107,7 @@ class DriverLocationController extends Controller
                 continue;
             }
 
-            $distance = $this->distanceKm(
+            $distance = $this->locationService->calculateDistanceKm(
                 $centerLatitude,
                 $centerLongitude,
                 (float) $location['latitude'],
@@ -159,18 +188,5 @@ class DriverLocationController extends Controller
         ));
 
         Cache::put(self::ACTIVE_DRIVER_IDS_KEY, $driverIds, now()->addMinutes(30));
-    }
-
-    private function distanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $earthRadiusKm = 6371;
-
-        $deltaLat = deg2rad($lat2 - $lat1);
-        $deltaLng = deg2rad($lng2 - $lng1);
-
-        $a = sin($deltaLat / 2) ** 2
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($deltaLng / 2) ** 2;
-
-        return 2 * $earthRadiusKm * asin(min(1, sqrt($a)));
     }
 }

@@ -57,11 +57,21 @@ class UserService
             'is_active' => true,
         ]);
 
+        if (isset($data['permissions']) && is_array($data['permissions'])) {
+            $user->permissions()->sync($data['permissions']);
+        }
+
         return $this->userRepo->find($user->id);
     }
 
-    public function toggleUserStatus(int $id)
+    public function toggleUserStatus(int $id, ?int $actingUserId = null)
     {
+        if ($actingUserId === $id) {
+            throw new \Exception('No puedes desactivar tu propia cuenta.');
+        }
+        if ($id === 1) {
+            throw new \Exception('No se puede alterar el estado del Super Administrador.');
+        }
         return $this->userRepo->toggleStatus($id);
     }
 
@@ -76,6 +86,10 @@ class UserService
 
         $updatedUser = $this->userRepo->update($id, $updateData);
 
+        if (isset($data['permissions']) && is_array($data['permissions'])) {
+            $updatedUser->permissions()->sync($data['permissions']);
+        }
+
         return [
             'id' => $updatedUser->id,
             'name' => $updatedUser->name,
@@ -83,14 +97,17 @@ class UserService
             'role' => $updatedUser->rol->rol_name ?? null,
             'role_id' => $updatedUser->rol_id,
             'is_active' => $updatedUser->is_active,
+            'permissions' => $updatedUser->permissions->pluck('name')->toArray()
         ];
     }
 
-    public function deleteUser(int $id)
+    public function deleteUser(int $id, ?int $actingUserId = null)
     {
-        $currentUser = auth('api')->user();
-        if ($currentUser && $currentUser->id === $id) {
+        if ($actingUserId === $id) {
             throw new \Exception('No puedes eliminar tu propia cuenta.');
+        }
+        if ($id === 1) {
+            throw new \Exception('No se puede eliminar la cuenta del Super Administrador.');
         }
 
         $this->userRepo->delete($id);

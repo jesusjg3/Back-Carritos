@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\ReportRepository;
 use Illuminate\Support\Facades\Cache;
+use App\Events\DashboardStatsUpdated;
 
 class ReportService
 {
@@ -111,5 +112,19 @@ class ReportService
         return Cache::remember($cacheKey, 15, function () use ($startDate, $endDate) {
             return $this->reportRepo->getDashboardStats($startDate, $endDate);
         });
+    }
+
+    /**
+     * Limpia la caché y emite el evento WebSockets con las métricas actualizadas
+     */
+    public function broadcastDashboardUpdates()
+    {
+        $cacheKey = 'dashboard_stats_' . md5('_');
+        Cache::forget($cacheKey);
+        
+        $stats = $this->getDashboardStats();
+        $hourly = $this->getHourlySummary();
+        
+        broadcast(new DashboardStatsUpdated($stats, $hourly));
     }
 }

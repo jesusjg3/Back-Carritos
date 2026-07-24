@@ -19,32 +19,7 @@ class DestinationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user = auth('api')->user();
-
-        if ($request->boolean('only_active', false)) {
-            $destinations = $this->destinationService->getAllDestinations();
-        } elseif ($request->has('per_page')) {
-            $perPage = $request->integer('per_page', 10);
-            $search = $request->query('search');
-            
-            $isActive = null;
-            if ($request->has('is_active')) {
-                $isActiveStr = $request->query('is_active');
-                if ($isActiveStr === 'true' || $isActiveStr === '1') {
-                    $isActive = true;
-                } elseif ($isActiveStr === 'false' || $isActiveStr === '0') {
-                    $isActive = false;
-                }
-            }
-            
-            $destinations = $this->destinationService->getPaginatedAdminDestinations($perPage, $search, $isActive);
-        } else {
-            if ($user && $user->rol_id === 1) {
-                $destinations = $this->destinationService->getAllAdminDestinations();
-            } else {
-                $destinations = $this->destinationService->getAllDestinations();
-            }
-        }
+        $destinations = $this->destinationService->listDestinations($request->all(), auth('api')->user());
         return response()->json($destinations);
     }
 

@@ -7,7 +7,6 @@ use App\Models\Trip;
 use App\Models\User;
 use App\Models\State;
 use Illuminate\Support\Facades\DB;
-use App\Models\TripPassenger;
 
 class TripService
 {
@@ -43,9 +42,7 @@ class TripService
                 $trip = $activeTrips->first();
                 
                 // Verificar si el usuario ya está en este viaje
-                $existingPassenger = TripPassenger::where('trip_id', $trip->id)
-                    ->where('passenger_id', $user->id)
-                    ->first();
+                $existingPassenger = $this->tripRepo->getPassengerInTrip($trip->id, $user->id);
 
                 if (!$existingPassenger) {
                     $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested');

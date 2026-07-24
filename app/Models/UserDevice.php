@@ -12,7 +12,7 @@ class UserDevice extends Model
 
     protected $fillable = [
         'user_id',
-        'fcm_token', // Usaremos esta columna para guardar el Expo Push Token y no crear otra migración
+        'expo_token',
         'device_name',
         'is_active',
     ];

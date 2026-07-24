@@ -21,7 +21,7 @@ class DeviceController extends Controller
         $user = Auth::user();
 
         // Check if the token already exists for another user and remove it
-        UserDevice::where('fcm_token', $request->expo_token)
+        UserDevice::where('expo_token', $request->expo_token)
             ->where('user_id', '!=', $user->id)
             ->delete();
 
@@ -29,7 +29,7 @@ class DeviceController extends Controller
         $device = UserDevice::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'fcm_token' => $request->expo_token,
+                'expo_token' => $request->expo_token,
             ],
             [
                 'device_name' => $request->device_name,

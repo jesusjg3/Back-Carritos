@@ -73,6 +73,20 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Trip::class, 'driver_id');
     }
 
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    public function hasPermission(string $permissionName): bool
+    {
+        if ($this->id === 1) {
+            return true;
+        }
+
+        return $this->permissions()->where('name', $permissionName)->exists();
+    }
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
@@ -92,7 +106,8 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'role' => $this->rol->rol_name ?? null,
-            'is_active' => $this->is_active
+            'is_active' => $this->is_active,
+            'permissions' => $this->permissions->pluck('name')->toArray()
         ];
     }
 }

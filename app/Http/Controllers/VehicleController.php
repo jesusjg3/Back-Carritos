@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Vehicle;
+use App\Http\Requests\StoreVehicleRequest;
+use App\Http\Requests\UpdateVehicleRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class VehicleController extends Controller
 {
@@ -38,20 +39,8 @@ class VehicleController extends Controller
     /**
      * Store a newly created vehicle in storage.
      */
-    public function store(Request $request)
+    public function store(StoreVehicleRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'brand' => 'required|string|max:50',
-            'model' => 'required|string|max:50',
-            'plate' => 'required|string|max:20|unique:vehicles,plate',
-            'color' => 'required|string|max:30',
-            'capacity' => 'required|integer|min:1|max:10',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         $vehicle = Vehicle::create([
             'brand' => $request->brand,
             'model' => $request->model,
@@ -84,7 +73,7 @@ class VehicleController extends Controller
     /**
      * Update the specified vehicle in storage.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateVehicleRequest $request, $id)
     {
         $vehicle = Vehicle::find($id);
 
@@ -92,19 +81,7 @@ class VehicleController extends Controller
             return response()->json(['message' => 'Vehículo no encontrado.'], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'brand' => 'sometimes|required|string|max:50',
-            'model' => 'sometimes|required|string|max:50',
-            'plate' => 'sometimes|required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
-            'color' => 'sometimes|required|string|max:30',
-            'capacity' => 'sometimes|required|integer|min:1|max:10',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $vehicle->update($request->all());
+        $vehicle->update($request->validated());
 
         return response()->json([
             'message' => 'Vehículo actualizado exitosamente.',

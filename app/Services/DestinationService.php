@@ -23,9 +23,34 @@ class DestinationService
         return $this->destinationRepo->allIncludeInactive();
     }
 
-    public function getPaginatedAdminDestinations(int $perPage, ?string $search = null, ?bool $isActive = null)
+    public function listDestinations(array $filters, $user = null)
     {
-        return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $isActive);
+        if (isset($filters['only_active']) && filter_var($filters['only_active'], FILTER_VALIDATE_BOOLEAN)) {
+            return $this->destinationRepo->all();
+        }
+
+        if (isset($filters['per_page'])) {
+            $perPage = (int) $filters['per_page'];
+            $search = $filters['search'] ?? null;
+
+            $isActive = null;
+            if (isset($filters['is_active'])) {
+                $isActiveStr = $filters['is_active'];
+                if ($isActiveStr === 'true' || $isActiveStr === '1') {
+                    $isActive = true;
+                } elseif ($isActiveStr === 'false' || $isActiveStr === '0') {
+                    $isActive = false;
+                }
+            }
+
+            return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $isActive);
+        }
+
+        if ($user && $user->rol_id === 1) {
+            return $this->destinationRepo->allIncludeInactive();
+        }
+
+        return $this->destinationRepo->all();
     }
 
     public function getDestinationById(int $id)
