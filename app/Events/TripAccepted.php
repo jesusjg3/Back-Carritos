@@ -55,8 +55,8 @@ class TripAccepted implements ShouldBroadcastNow
                     'email' => $this->trip->driver->email,
                     'rating' => $this->trip->driver->ratingProfile->score ?? 5.0,
                     'score' => $this->trip->driver->ratingProfile->score ?? 5.0,
-                    'latitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['latitude'] ?? null,
-                    'longitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['longitude'] ?? null,
+                    'latitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                     // Agregar más campos si es necesario (foto, placa, etc.)
                 ] : null,
                 'origin' => [

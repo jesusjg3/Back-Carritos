@@ -53,8 +53,8 @@ class TripStarted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
-                    'latitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['latitude'] ?? null,
-                    'longitude' => \Illuminate\Support\Facades\Cache::get("driver.location.{$this->trip->driver_id}")['longitude'] ?? null,
+                    'latitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                 ] : null,
                 'origin' => [
                     'lat' => $this->trip->origin_lat,

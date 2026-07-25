@@ -130,8 +130,17 @@ class TripRepository
     public function getDriverLocation(int $driverId): ?array
     {
         $location = \Illuminate\Support\Facades\Cache::get("driver.location.{$driverId}");
-        if (is_array($location)) {
+        if (is_array($location) && isset($location['latitude'])) {
             return $location;
+        }
+        
+        $dbLocation = \App\Models\DriverLocation::where('user_id', $driverId)->first();
+        if ($dbLocation) {
+            return [
+                'latitude' => (float) $dbLocation->latitude,
+                'longitude' => (float) $dbLocation->longitude,
+                'last_update' => $dbLocation->last_update
+            ];
         }
         return null;
     }
