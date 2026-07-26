@@ -18,7 +18,11 @@ class PermissionSeeder extends Seeder
             ['name' => 'view_driver_reports', 'description' => 'Permite ver el reporte de conductores'],
             ['name' => 'view_route_reports', 'description' => 'Permite ver el reporte de rutas'],
             ['name' => 'view_passenger_reports', 'description' => 'Permite ver el reporte de pasajeros'],
-            ['name' => 'manage_users', 'description' => 'Permite crear, editar y eliminar usuarios del sistema'],
+            ['name' => 'manage_users', 'description' => 'Permite crear, editar y eliminar usuarios del sistema (Conductores y Pasajeros)'],
+            ['name' => 'manage_admins', 'description' => 'Permite crear, editar y suspender a otros administradores'],
+            ['name' => 'manage_vehicles', 'description' => 'Permite gestionar la flota de vehículos'],
+            ['name' => 'manage_destinations', 'description' => 'Permite gestionar las paradas y destinos'],
+            ['name' => 'view_history', 'description' => 'Permite visualizar el historial completo de viajes'],
         ];
 
         foreach ($permissions as $perm) {

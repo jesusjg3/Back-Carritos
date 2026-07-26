@@ -15,9 +15,6 @@ class ReportController extends Controller
         $this->reportService = $reportService;
     }
 
-    /**
-     * Resumen de rendimiento de todos los conductores.
-     */
     public function driversSummary(Request $request): JsonResponse
     {
         try {
@@ -31,6 +28,38 @@ class ReportController extends Controller
         } catch (\Exception $exception) {
             \Illuminate\Support\Facades\Log::error('Error in driversSummary: ' . $exception->getMessage());
             return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de conductores.'], 500);
+        }
+    }
+
+    public function passengersSummary(Request $request): JsonResponse
+    {
+        try {
+            $search = $request->query('search');
+            $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            
+            $summary = $this->reportService->getPassengersSummary($search, $perPage, $startDate, $endDate);
+            return response()->json($summary);
+        } catch (\Exception $exception) {
+            \Illuminate\Support\Facades\Log::error('Error in passengersSummary: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de pasajeros.'], 500);
+        }
+    }
+
+    public function routesDetailsSummary(Request $request): JsonResponse
+    {
+        try {
+            $search = $request->query('search');
+            $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            
+            $summary = $this->reportService->getRoutesDetailsSummary($search, $perPage, $startDate, $endDate);
+            return response()->json($summary);
+        } catch (\Exception $exception) {
+            \Illuminate\Support\Facades\Log::error('Error in routesDetailsSummary: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al generar el detalle de rutas.'], 500);
         }
     }
 
@@ -143,6 +172,19 @@ class ReportController extends Controller
         } catch (\Exception $exception) {
             \Illuminate\Support\Facades\Log::error('Error in dashboardStats: ' . $exception->getMessage());
             return response()->json(['error' => 'Ocurrió un error interno al obtener estadísticas del dashboard.'], 500);
+        }
+    }
+
+    public function tripsCoordinates(Request $request): JsonResponse
+    {
+        try {
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            $coordinates = $this->reportService->getTripsCoordinates($startDate, $endDate);
+            return response()->json($coordinates);
+        } catch (\Exception $exception) {
+            \Illuminate\Support\Facades\Log::error('Error in tripsCoordinates: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al obtener las coordenadas.'], 500);
         }
     }
 }

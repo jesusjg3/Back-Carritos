@@ -73,7 +73,8 @@ class ReportRepository
      */
     public function getDestinationsSummary(int $safeTotalCompleted, ?string $startDate = null, ?string $endDate = null): array
     {
-        $query = Trip::where('state_id', State::FINISHED);
+        $query = Trip::where('state_id', State::FINISHED)
+                     ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada']);
         if ($startDate) $query->where('created_at', '>=', $startDate);
         if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
 
@@ -185,7 +186,9 @@ class ReportRepository
      */
     public function getRoutesPerformance(?string $startDate = null, ?string $endDate = null): array
     {
-        $query = Trip::where('state_id', State::FINISHED);
+        $query = Trip::where('state_id', State::FINISHED)
+                     ->whereNotIn('origin_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
+                     ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada']);
         
         if ($startDate) {
             $query->where('created_at', '>=', $startDate);
@@ -208,6 +211,112 @@ class ReportRepository
                 ->limit(5)
                 ->get()
                 ->toArray();
+    }
+
+    public function getRoutesDetailsSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
+    {
+        $query = Trip::select(
+                'origin_address',
+                'destination_address',
+                DB::raw('COUNT(CASE WHEN state_id = ' . State::FINISHED . ' THEN 1 END) as completed_trips'),
+                DB::raw('COUNT(CASE WHEN state_id = ' . State::CANCELLED . ' THEN 1 END) as canceled_trips'),
+                DB::raw('COALESCE(ROUND(AVG(CASE WHEN state_id = ' . State::FINISHED . ' THEN EXTRACT(EPOCH FROM (updated_at - created_at))/60 END)::numeric, 1), 0.0) as avg_duration_minutes')
+            )
+            ->whereNotIn('origin_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
+            ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
+            ->groupBy('origin_address', 'destination_address');
+        
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('origin_address', 'ilike', "%{$search}%")
+                  ->orWhere('destination_address', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($perPage) {
+            return $query->paginate($perPage);
+        }
+        return $query->get()->toArray();
+    }
+
+    public function getPassengersSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
+    {
+        $query = User::whereHas('rol', function ($q) {
+                $q->where('rol_name', 'pasajero');
+            })
+            ->leftJoin('trip_passengers', 'users.id', '=', 'trip_passengers.passenger_id')
+            ->leftJoin('trips', 'trip_passengers.trip_id', '=', 'trips.id')
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                'users.is_active',
+                DB::raw('COUNT(CASE WHEN trips.state_id = ' . State::FINISHED . ' THEN 1 END) as completed_trips'),
+                DB::raw('COUNT(CASE WHEN trips.state_id = ' . State::CANCELLED . ' THEN 1 END) as canceled_trips')
+            )
+            ->groupBy('users.id', 'users.name', 'users.email', 'users.is_active');
+
+        if ($startDate) $query->where('trips.created_at', '>=', $startDate);
+        if ($endDate) $query->where('trips.created_at', '<=', $endDate . ' 23:59:59');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('users.name', 'ilike', "%{$search}%")
+                  ->orWhere('users.email', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($perPage) {
+            return $query->paginate($perPage);
+        }
+        return $query->get()->toArray();
+    }
+
+    public function getCancellationsOverTime(?string $startDate = null, ?string $endDate = null): array
+    {
+        $query = Trip::where('state_id', State::CANCELLED);
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->toArray();
+    }
+
+    public function getWaitTimeOverTime(?string $startDate = null, ?string $endDate = null): array
+    {
+        $query = Trip::whereIn('state_id', [State::ACCEPTED, State::STARTED, State::FINISHED]);
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(accepted_at, updated_at) - created_at))/60)::numeric, 1), 0.0) as avg_wait_minutes')
+            )
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->toArray();
+    }
+
+    public function getTripsCoordinates(?string $startDate = null, ?string $endDate = null): array
+    {
+        $query = Trip::whereNotNull('origin_lat')->whereNotNull('origin_lng');
+        
+        if ($startDate) $query->where('created_at', '>=', $startDate);
+        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+
+        return $query->select('origin_lat as lat', 'origin_lng as lng')
+            ->get()
+            ->toArray();
     }
 
     /**

@@ -20,6 +20,16 @@ class ReportService
         return $this->reportRepo->getDriversSummary($search, $perPage, $startDate, $endDate);
     }
 
+    public function getPassengersSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
+    {
+        return $this->reportRepo->getPassengersSummary($search, $perPage, $startDate, $endDate);
+    }
+
+    public function getRoutesDetailsSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
+    {
+        return $this->reportRepo->getRoutesDetailsSummary($search, $perPage, $startDate, $endDate);
+    }
+
     /**
      * Resumen de demanda por destinos (frecuencia de viajes completados).
      */
@@ -86,6 +96,8 @@ class ReportService
             $distribution = $this->reportRepo->getRatingsDistribution($startDate, $endDate);
             $comments = $this->reportRepo->getRecentComments($startDate, $endDate);
             $routes = $this->reportRepo->getRoutesPerformance($startDate, $endDate);
+            $cancellations = $this->reportRepo->getCancellationsOverTime($startDate, $endDate);
+            $wait_times = $this->reportRepo->getWaitTimeOverTime($startDate, $endDate);
             $stats = $this->reportRepo->getDashboardStats($startDate, $endDate);
 
             return [
@@ -98,8 +110,18 @@ class ReportService
                     'comments' => $comments,
                 ],
                 'routes' => $routes,
+                'cancellations' => $cancellations,
+                'wait_times' => $wait_times,
                 'stats' => $stats,
             ];
+        });
+    }
+
+    public function getTripsCoordinates(?string $startDate = null, ?string $endDate = null): array
+    {
+        $cacheKey = 'trips_coordinates_' . md5($startDate . '_' . $endDate);
+        return Cache::remember($cacheKey, 300, function () use ($startDate, $endDate) {
+            return $this->reportRepo->getTripsCoordinates($startDate, $endDate);
         });
     }
 
@@ -110,7 +132,13 @@ class ReportService
     {
         $cacheKey = 'dashboard_stats_' . md5($startDate . '_' . $endDate);
         return Cache::remember($cacheKey, 15, function () use ($startDate, $endDate) {
-            return $this->reportRepo->getDashboardStats($startDate, $endDate);
+            $stats = $this->reportRepo->getDashboardStats($startDate, $endDate);
+            $cancellations = $this->reportRepo->getCancellationsOverTime($startDate, $endDate);
+            $wait_times = $this->reportRepo->getWaitTimeOverTime($startDate, $endDate);
+            
+            $stats['cancellations'] = $cancellations;
+            $stats['wait_times'] = $wait_times;
+            return $stats;
         });
     }
 

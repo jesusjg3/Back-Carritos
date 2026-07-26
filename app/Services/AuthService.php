@@ -73,6 +73,7 @@ class AuthService
                 'role' => $user->rol->rol_name ?? null,
                 'role_id' => $user->rol_id,
                 'is_active' => $user->is_active,
+                'permissions' => $user->permissions->pluck('name')->toArray(),
             ],
         ];
     }
@@ -96,6 +97,7 @@ class AuthService
             'role' => $user->rol->rol_name ?? null,
             'role_id' => $user->rol_id,
             'is_active' => $user->is_active,
+            'permissions' => $user->permissions->pluck('name')->toArray(),
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];

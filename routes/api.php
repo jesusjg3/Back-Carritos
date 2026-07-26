@@ -28,44 +28,63 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/devices', [\App\Http\Controllers\DeviceController::class, 'store']);
 
     Route::middleware('is_active')->group(function () {
-        // Rutas Exclusivas para el Administrador
-        Route::middleware('role:admin')->group(function () {
-            Route::middleware('permission:view_dashboard')->group(function () {
-                Route::get('/dashboard/stats', [ReportController::class, 'dashboardStats']);
-                Route::get('/reports/all-summary', [ReportController::class, 'allSummary']);
-            });
+        // Rutas con Permisos Granulares (Admin o Usuarios con el permiso)
+        Route::middleware('permission:view_dashboard,view_driver_reports,view_route_reports,view_passenger_reports')->group(function () {
+            Route::get('/reports/all-summary', [ReportController::class, 'allSummary']);
+        });
 
-            Route::middleware('permission:view_driver_reports')->group(function () {
-                Route::get('/reports/drivers-summary', [ReportController::class, 'driversSummary']);
-                Route::get('/reports/ratings-distribution', [ReportController::class, 'ratingsDistribution']);
-            });
+        Route::middleware('permission:view_dashboard')->group(function () {
+            Route::get('/dashboard/stats', [ReportController::class, 'dashboardStats']);
+        });
 
-            Route::middleware('permission:view_route_reports')->group(function () {
-                Route::get('/reports/destinations-summary', [ReportController::class, 'destinationsSummary']);
-                Route::get('/reports/hourly-summary', [ReportController::class, 'hourlySummary']);
-                Route::get('/reports/daily-summary', [ReportController::class, 'dailySummary']);
-                Route::get('/reports/routes-performance', [ReportController::class, 'routesPerformance']);
-            });
+        Route::middleware('permission:view_driver_reports')->group(function () {
+            Route::get('/reports/drivers-summary', [ReportController::class, 'driversSummary']);
+            Route::get('/reports/ratings-distribution', [ReportController::class, 'ratingsDistribution']);
+        });
 
-            Route::middleware('permission:manage_users')->group(function () {
-                Route::get('/users', [UserController::class, 'listUsers']);
-                Route::post('/users/drivers', [UserController::class, 'storeDriver']);
-                Route::post('/users/admins', [UserController::class, 'storeAdmin']);
-                Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
-                Route::put('/users/{id}', [UserController::class, 'updateUser']);
-                Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
-                Route::post('/users/{id}/restore', [UserController::class, 'restoreUser']);
-            });
+        Route::middleware('permission:view_route_reports')->group(function () {
+            Route::get('/reports/destinations-summary', [ReportController::class, 'destinationsSummary']);
+            Route::get('/reports/hourly-summary', [ReportController::class, 'hourlySummary']);
+            Route::get('/reports/daily-summary', [ReportController::class, 'dailySummary']);
+            Route::get('/reports/routes-performance', [ReportController::class, 'routesPerformance']);
+            Route::get('/reports/routes-details', [ReportController::class, 'routesDetailsSummary']);
+            Route::get('/reports/trips-coordinates', [ReportController::class, 'tripsCoordinates']);
+        });
 
-            Route::apiResource('rols', RolController::class);
-            Route::apiResource('states', StateController::class);
+        Route::middleware('permission:view_passenger_reports')->group(function () {
+            Route::get('/reports/passengers-summary', [ReportController::class, 'passengersSummary']);
+        });
+
+        Route::middleware('permission:manage_users')->group(function () {
+            Route::get('/users', [UserController::class, 'listUsers']);
+            Route::post('/users/drivers', [UserController::class, 'storeDriver']);
+            Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+            Route::put('/users/{id}', [UserController::class, 'updateUser']);
+            Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
+            Route::post('/users/{id}/restore', [UserController::class, 'restoreUser']);
+        });
+
+        Route::middleware('permission:manage_admins')->group(function () {
+            Route::post('/users/admins', [UserController::class, 'storeAdmin']);
+        });
+
+        Route::middleware('permission:manage_vehicles')->group(function () {
             Route::apiResource('vehicles', \App\Http\Controllers\VehicleController::class);
             Route::patch('/vehicles/{id}/toggle-status', [\App\Http\Controllers\VehicleController::class, 'toggleStatus']);
+        });
+
+        Route::middleware('permission:manage_destinations')->group(function () {
             Route::post('/destinations', [DestinationController::class, 'store']);
             Route::put('/destinations/{id}', [DestinationController::class, 'update']);
             Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
             Route::post('/destinations/{id}/restore', [DestinationController::class, 'restore']);
             Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
+        });
+
+        // Rutas Exclusivas para el Administrador (Configuraciones base)
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('rols', RolController::class);
+            Route::apiResource('states', StateController::class);
         });
 
         Route::post('/trips/request', [TripController::class, 'request']);
@@ -77,9 +96,12 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
         Route::post('/trips/{id}/rate', [TripRatingController::class, 'store']);
-        Route::get('/trips', [TripController::class, 'index']); // Historial Admin Completo
-        Route::get('/trips/history', [TripController::class, 'history']);
         Route::get('/ratings', [TripRatingController::class, 'index']);
+
+        Route::middleware('permission:view_history')->group(function () {
+            Route::get('/trips', [TripController::class, 'index']); // Historial Admin Completo
+            Route::get('/trips/history', [TripController::class, 'history']);
+        });
 
         Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
         Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);

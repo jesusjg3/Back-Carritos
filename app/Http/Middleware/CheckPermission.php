@@ -13,7 +13,7 @@ class CheckPermission
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, ...$permissions): Response
     {
         $user = auth()->user();
 
@@ -21,7 +21,15 @@ class CheckPermission
             return response()->json(['error' => 'No autenticado.'], 401);
         }
 
-        if (!$user->hasPermission($permission)) {
+        $hasAny = false;
+        foreach ($permissions as $permission) {
+            if ($user->hasPermission($permission)) {
+                $hasAny = true;
+                break;
+            }
+        }
+
+        if (!$hasAny) {
             return response()->json(['error' => 'No tienes permisos para realizar esta acción.'], 403);
         }
 

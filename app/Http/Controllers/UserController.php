@@ -67,7 +67,13 @@ class UserController extends Controller
     public function updateUser(UpdateUserRequest $request, int $id): JsonResponse
     {
         try {
-            $user = $this->userService->updateUser($id, $request->validated());
+            $data = $request->validated();
+            // Asegurar que si permissions viene vacío, se respete para poder limpiar los permisos
+            if ($request->has('permissions')) {
+                $data['permissions'] = $request->input('permissions', []);
+            }
+
+            $user = $this->userService->updateUser($id, $data);
             return response()->json([
                 'message' => 'Usuario actualizado correctamente',
                 'user' => $user
