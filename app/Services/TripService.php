@@ -136,6 +136,9 @@ class TripService
             'started_at' => now(),
         ]);
 
+        // Auto-board all accepted passengers to avoid skipping the boarding phase
+        $this->tripRepo->updateAllPassengersStatus($tripId, 'accepted', 'boarded');
+
         $trip->load(['passengers', 'driver', 'state']);
         broadcast(new \App\Events\TripStarted($trip));
 
