@@ -17,7 +17,7 @@ return new class extends Migration {
             
             $table->string('external_reference_id')->nullable();
             
-            $table->boolean('is_active')->default(true);
+            $table->string('status')->default('active'); // active, maintenance, inactive
             
             $table->timestamps();
             $table->softDeletes();

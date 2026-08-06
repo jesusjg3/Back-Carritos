@@ -8,6 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
 use Illuminate\Queue\SerializesModels;
+use App\Models\Trip;
 
 class TripLocationUpdated implements ShouldBroadcastNow
 {
@@ -31,16 +32,20 @@ class TripLocationUpdated implements ShouldBroadcastNow
         $this->status = $status;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('trip.' . $this->tripId),
         ];
+
+        $trip = Trip::with('passengers')->find($this->tripId);
+        if ($trip) {
+            foreach ($trip->passengers as $passenger) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
+        }
+
+        return $channels;
     }
 
     /**

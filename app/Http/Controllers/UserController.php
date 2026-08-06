@@ -94,18 +94,4 @@ class UserController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
-
-    public function restoreUser(int $id): JsonResponse
-    {
-        try {
-            $user = $this->userService->restoreUser($id);
-            return response()->json([
-                'message' => 'Usuario restaurado correctamente',
-                'user' => $user
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
-    }
-
 }

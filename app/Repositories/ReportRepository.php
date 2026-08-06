@@ -7,6 +7,9 @@ use App\Models\Trip;
 use App\Models\Rol;
 use App\Models\Destination;
 use App\Models\State;
+use App\Models\Shift;
+use App\Models\Complaint;
+use App\Models\Vehicle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 class ReportRepository
@@ -354,7 +357,7 @@ class ReportRepository
                 'admins' => User::withTrashed()->where('rol_id', $adminRoleId)->count(),
                 'passengers' => User::withTrashed()->where('rol_id', $passengerRoleId)->count(),
                 'destinations' => Destination::withTrashed()->count(),
-                'vehicles' => \App\Models\Vehicle::count(),
+                'vehicles' => Vehicle::count(),
                 'trips' => $tripsQuery->count(),
                 'active' => $activeTripsQuery->count(),
                 'completed' => $completedTripsQuery->count(),

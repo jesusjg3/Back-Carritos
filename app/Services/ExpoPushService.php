@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\UserDevice;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class ExpoPushService
 {
@@ -65,7 +66,7 @@ class ExpoPushService
             }
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error ejecutando push a Expo: ' . $e->getMessage());
             return false;
         }

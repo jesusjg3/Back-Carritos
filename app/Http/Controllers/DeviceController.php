@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Auth;
 
 class DeviceController extends Controller
 {
-    /**
-     * Store or update a user's Expo Push Token.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -20,12 +17,10 @@ class DeviceController extends Controller
 
         $user = Auth::user();
 
-        // Check if the token already exists for another user and remove it
         UserDevice::where('expo_token', $request->expo_token)
             ->where('user_id', '!=', $user->id)
             ->delete();
 
-        // Update or create the token for the current user
         $device = UserDevice::updateOrCreate(
             [
                 'user_id' => $user->id,

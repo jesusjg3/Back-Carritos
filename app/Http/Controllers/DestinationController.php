@@ -47,19 +47,6 @@ class DestinationController extends Controller
         return response()->json(null, 204);
     }
 
-    public function restore(int $id): JsonResponse
-    {
-        try {
-            $destination = $this->destinationService->restoreDestination($id);
-            return response()->json([
-                'message' => 'Destino restaurado exitosamente',
-                'destination' => $destination
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
-    }
-
     public function toggleStatus(int $id): JsonResponse
     {
         try {

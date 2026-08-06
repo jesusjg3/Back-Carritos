@@ -18,11 +18,20 @@ class Vehicle extends Model
         'plate',
         'color',
         'capacity',
-        'is_active',
+        'status',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'capacity' => 'integer',
     ];
+
+    public function driverProfiles()
+    {
+        return $this->hasMany(DriverProfile::class);
+    }
+
+    public function events()
+    {
+        return $this->belongsToMany(Event::class, 'event_vehicle');
+    }
 }

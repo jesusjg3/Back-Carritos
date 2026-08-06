@@ -25,7 +25,12 @@ class TripCancelled implements ShouldBroadcastNow
     {
         return [
             'id' => $this->trip->id,
-            'message' => 'Trip cancelled'
+            'message' => 'Trip cancelled',
+            'trip' => [
+                'id' => $this->trip->id,
+                'cancel_reason' => $this->trip->cancel_reason
+            ],
+            'reason' => $this->trip->cancel_reason
         ];
     }
 

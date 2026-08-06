@@ -15,7 +15,7 @@ class UserRepository
 
     public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        $query = User::with(['rol', 'ratingProfile'])->withTrashed();
+        $query = User::with(['rol', 'ratingProfile']);
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -86,28 +86,21 @@ class UserRepository
 
     public function update($id, array $data)
     {
-        $user = User::withTrashed()->findOrFail($id);
+        $user = User::findOrFail($id);
         $user->update($data);
         return $user;
     }
 
     public function delete($id)
     {
-        return User::withTrashed()->findOrFail($id)->delete();
+        return User::findOrFail($id)->delete();
     }
 
     public function toggleStatus($id)
     {
-        $user = User::with('rol')->withTrashed()->findOrFail($id);
+        $user = User::findOrFail($id);
         $user->is_active = !$user->is_active;
         $user->save();
-        return $user;
-    }
-
-    public function restore($id)
-    {
-        $user = User::withTrashed()->findOrFail($id);
-        $user->restore();
         return $user;
     }
 

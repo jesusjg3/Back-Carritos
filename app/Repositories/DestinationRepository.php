@@ -18,7 +18,7 @@ class DestinationRepository
 
     public function paginateAdminDestinations(int $perPage, ?string $search = null, ?bool $isActive = null)
     {
-        $query = Destination::withTrashed();
+        $query = Destination::query();
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -30,11 +30,6 @@ class DestinationRepository
 
         if ($isActive !== null) {
             $query->where('is_active', $isActive);
-            if (!$isActive) {
-                $query->whereNotNull('deleted_at');
-            } else {
-                $query->whereNull('deleted_at');
-            }
         }
 
         return $query->paginate($perPage);
@@ -42,7 +37,7 @@ class DestinationRepository
 
     public function find(int $id)
     {
-        return Destination::withTrashed()->findOrFail($id);
+        return Destination::findOrFail($id);
     }
 
     public function create(array $data)
@@ -52,7 +47,7 @@ class DestinationRepository
 
     public function update(int $id, array $data)
     {
-        $destination = Destination::withTrashed()->findOrFail($id);
+        $destination = Destination::findOrFail($id);
         $destination->update($data);
 
         return $destination;
@@ -60,20 +55,13 @@ class DestinationRepository
 
     public function delete(int $id)
     {
-        $destination = Destination::withTrashed()->findOrFail($id);
+        $destination = Destination::findOrFail($id);
         return $destination->delete();
-    }
-
-    public function restore(int $id)
-    {
-        $destination = Destination::withTrashed()->findOrFail($id);
-        $destination->restore();
-        return $destination;
     }
 
     public function toggleStatus(int $id)
     {
-        $destination = Destination::withTrashed()->findOrFail($id);
+        $destination = Destination::findOrFail($id);
         $destination->is_active = !$destination->is_active;
         $destination->save();
 

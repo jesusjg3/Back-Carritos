@@ -15,15 +15,17 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
     public int $driverId;
     public float $latitude;
     public float $longitude;
+    public string $vehicleStatus;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $driverId, float $latitude, float $longitude)
+    public function __construct(int $driverId, float $latitude, float $longitude, string $vehicleStatus = 'active')
     {
         $this->driverId = $driverId;
         $this->latitude = $latitude;
         $this->longitude = $longitude;
+        $this->vehicleStatus = $vehicleStatus;
     }
 
     /**
@@ -48,6 +50,7 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
             'driver_id' => $this->driverId,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'vehicle_status' => $this->vehicleStatus,
             'timestamp' => now()->toISOString(),
         ];
     }

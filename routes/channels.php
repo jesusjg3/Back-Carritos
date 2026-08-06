@@ -26,3 +26,7 @@ Broadcast::channel('trip.{tripId}', function ($user, $tripId) {
 Broadcast::channel('admin.live_tracking', function ($user) {
     return $user->rol_id === 1; // Solo administradores pueden ver el radar global
 });
+
+Broadcast::channel('admin.notifications', function ($user) {
+    return $user->rol_id === 1; // Solo administradores reciben notificaciones globales
+});

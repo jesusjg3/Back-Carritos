@@ -3,16 +3,19 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
+use App\Repositories\DriverProfileRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthService
 {
     protected UserRepository $userRepo;
+    protected DriverProfileRepository $driverProfileRepo;
 
-    public function __construct(UserRepository $userRepo)
+    public function __construct(UserRepository $userRepo, DriverProfileRepository $driverProfileRepo)
     {
         $this->userRepo = $userRepo;
+        $this->driverProfileRepo = $driverProfileRepo;
     }
 
     public function login(string $email, string $password)
@@ -30,7 +33,63 @@ class AuthService
             throw new \Exception('Su cuenta ha sido desactivada.');
         }
 
-        return $this->respondWithToken($token, $user);
+        // Validate driver constraints
+        if ($user->rol && $user->rol->rol_name === 'conductor') {
+            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
+
+            if (!$driverProfile) {
+                auth('api')->logout();
+                throw new \Exception('No tienes un perfil de conductor asignado.');
+            }
+
+            if (!$driverProfile->is_active) {
+                auth('api')->logout();
+                throw new \Exception('Tu perfil de conductor se encuentra inactivo.');
+            }
+
+            if (!$driverProfile->shift) {
+                auth('api')->logout();
+                throw new \Exception('No tienes un horario asignado.');
+            }
+
+            // Check if shift is active
+            if ($driverProfile->shift && !$driverProfile->shift->is_active) {
+                auth('api')->logout();
+                throw new \Exception('Tu horario asignado se encuentra inactivo.');
+            }
+
+            if ($driverProfile->vehicle && $driverProfile->vehicle->status === 'inactive') {
+                auth('api')->logout();
+                throw new \Exception('Tu vehículo asignado se encuentra inactivo.');
+            }
+
+            // We do NOT block login if vehicle is in maintenance anymore
+            // (Handled by respondWithToken)
+
+            if ($driverProfile->shift) {
+                $now = \Carbon\Carbon::now('America/Guayaquil');
+                $startTime = \Carbon\Carbon::parse($driverProfile->shift->start_time, 'America/Guayaquil');
+                $endTime = \Carbon\Carbon::parse($driverProfile->shift->end_time, 'America/Guayaquil');
+
+                if ($endTime->lessThan($startTime)) {
+                    // Shift spans across midnight
+                    if (!$now->between($startTime, $now->copy()->endOfDay()) && 
+                        !$now->between($now->copy()->startOfDay(), $endTime)) {
+                        auth('api')->logout();
+                        throw new \Exception('No te encuentras dentro de tu horario asignado.');
+                    }
+                } else {
+                    if (!$now->between($startTime, $endTime)) {
+                        auth('api')->logout();
+                        throw new \Exception('No te encuentras dentro de tu horario asignado.');
+                    }
+                }
+            }
+        }
+
+        $response = $this->respondWithToken($token, $user);
+
+        return $response;
     }
 
     public function register(array $data)
@@ -61,11 +120,21 @@ class AuthService
         if ($user && !$user->relationLoaded('rol')) {
             $user = $this->userRepo->find($user->id);
         }
+        
+        $isMaintenance = false;
+        if ($user->rol && $user->rol->rol_name === 'conductor') {
+            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
+            if ($driverProfile && $driverProfile->vehicle && $driverProfile->vehicle->status === 'maintenance') {
+                $isMaintenance = true;
+            }
+        }
 
         return [
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60,
+            'vehicle_maintenance' => $isMaintenance,
+            'message' => $isMaintenance ? 'Tu vehículo asignado está en mantenimiento. Podrás ingresar para realizar labores alternas.' : null,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -74,6 +143,7 @@ class AuthService
                 'role_id' => $user->rol_id,
                 'is_active' => $user->is_active,
                 'permissions' => $user->permissions->pluck('name')->toArray(),
+                'vehicle_maintenance' => $isMaintenance,
             ],
         ];
     }
@@ -89,6 +159,14 @@ class AuthService
         if (!$user->relationLoaded('rol')) {
             $user = $this->userRepo->find($user->id);
         }
+        
+        $isMaintenance = false;
+        if ($user->rol && $user->rol->rol_name === 'conductor') {
+            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
+            if ($driverProfile && $driverProfile->vehicle && $driverProfile->vehicle->status === 'maintenance') {
+                $isMaintenance = true;
+            }
+        }
 
         return [
             'id' => $user->id,
@@ -98,6 +176,7 @@ class AuthService
             'role_id' => $user->rol_id,
             'is_active' => $user->is_active,
             'permissions' => $user->permissions->pluck('name')->toArray(),
+            'vehicle_maintenance' => $isMaintenance,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];

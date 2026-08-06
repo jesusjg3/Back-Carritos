@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Services\TripRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Exception;
 
 class TripRatingController extends Controller
 {
@@ -29,9 +31,9 @@ class TripRatingController extends Controller
                 $request->input('receiver_id')
             );
             return response()->json($rating, 201);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Carrera no encontrada'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
@@ -42,7 +44,7 @@ class TripRatingController extends Controller
             $user = Auth::user();
             $ratings = $this->ratingService->getRatingsReceived($user);
             return response()->json($ratings);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }

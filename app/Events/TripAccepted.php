@@ -11,6 +11,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Repositories\TripRepository;
 
 class TripAccepted implements ShouldBroadcastNow
 {
@@ -55,8 +56,8 @@ class TripAccepted implements ShouldBroadcastNow
                     'email' => $this->trip->driver->email,
                     'rating' => $this->trip->driver->ratingProfile->score ?? 5.0,
                     'score' => $this->trip->driver->ratingProfile->score ?? 5.0,
-                    'latitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
-                    'longitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
+                    'latitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                     // Agregar más campos si es necesario (foto, placa, etc.)
                 ] : null,
                 'origin' => [

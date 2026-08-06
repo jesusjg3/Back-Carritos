@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Trip;
 use App\Models\TripPassenger;
+use App\Models\DriverLocation;
+use App\Models\State;
 
 class TripRepository
 {
@@ -52,40 +54,6 @@ class TripRepository
 
         $paginator = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        $paginator->getCollection()->transform(function ($trip) {
-            return [
-                'id' => $trip->id,
-                'origin_lat' => $trip->origin_lat,
-                'origin_lng' => $trip->origin_lng,
-                'origin_address' => $trip->origin_address,
-                'destination_lat' => $trip->destination_lat,
-                'destination_lng' => $trip->destination_lng,
-                'destination_address' => $trip->destination_address,
-                'distance' => $trip->distance,
-                'passengers_count' => $trip->passengers_count,
-                'state_id' => $trip->state_id,
-                'created_at' => $trip->created_at,
-                'updated_at' => $trip->updated_at,
-                'state' => $trip->state ? ['state_name' => $trip->state->state_name] : null,
-                'driver' => $trip->driver ? ['name' => $trip->driver->name] : null,
-                'passengers' => $trip->passengers->map(function ($p) {
-                    return [
-                        'id' => $p->id,
-                        'name' => $p->name,
-                        'pivot' => ['status' => $p->pivot->status]
-                    ];
-                })->toArray(),
-                'ratings' => $trip->ratings->map(function ($r) {
-                    return [
-                        'id' => $r->id,
-                        'rating' => $r->rating,
-                        'comment' => $r->comment,
-                        'emitter' => $r->emitter ? ['name' => $r->emitter->name] : null
-                    ];
-                })->toArray(),
-            ];
-        });
-
         return $paginator;
     }
 
@@ -129,25 +97,21 @@ class TripRepository
 
     public function getDriverLocation(int $driverId): ?array
     {
-        $location = \Illuminate\Support\Facades\Cache::get("driver.location.{$driverId}");
+        $location = \Illuminate\Support\Facades\Cache::get("driver.location.{$driverId}") ?? \Illuminate\Support\Facades\Cache::get("drivers.live.{$driverId}");
+        
+        // La clave actual que usa el LocationController es driverLocationKey($driverId)
+        // que es driver.location.{id} o drivers.live.{id}
+        
         if (is_array($location) && isset($location['latitude'])) {
             return $location;
         }
         
-        $dbLocation = \App\Models\DriverLocation::where('user_id', $driverId)->first();
-        if ($dbLocation) {
-            return [
-                'latitude' => (float) $dbLocation->latitude,
-                'longitude' => (float) $dbLocation->longitude,
-                'last_update' => $dbLocation->last_update
-            ];
-        }
         return null;
     }
 
     public function findActiveTripsForRoute(string $destinationAddress, int $availableSeatsRequired = 1)
     {
-        return Trip::whereIn('state_id', [\App\Models\State::REQUESTED, \App\Models\State::ACCEPTED, \App\Models\State::STARTED])
+        return Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
             ->where('destination_address', $destinationAddress)
             // Filtramos aquellos viajes donde el número de asientos ocupados más los que pide el nuevo no exceda un límite (ej. 4)
             ->whereRaw('COALESCE((SELECT COUNT(*) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= 4', [$availableSeatsRequired])
@@ -200,7 +164,7 @@ class TripRepository
     public function getActiveTripForDriver(int $driverId)
     {
         return Trip::where('driver_id', $driverId)
-            ->whereIn('state_id', [\App\Models\State::ACCEPTED, \App\Models\State::STARTED])
+            ->whereIn('state_id', [State::ACCEPTED, State::STARTED])
             ->first();
     }
 }

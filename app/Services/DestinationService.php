@@ -73,11 +73,6 @@ class DestinationService
         return $this->destinationRepo->delete($id);
     }
 
-    public function restoreDestination(int $id)
-    {
-        return $this->destinationRepo->restore($id);
-    }
-
     public function toggleDestinationStatus(int $id)
     {
         return $this->destinationRepo->toggleStatus($id);

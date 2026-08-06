@@ -11,6 +11,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DriverLocationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\DriverProfileController;
+use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\VehicleController;
 
 // Public
 Route::get('/destinations', [DestinationController::class, 'index']);
@@ -25,7 +31,22 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/refresh', [AuthController::class, 'refresh']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    Route::post('/devices', [\App\Http\Controllers\DeviceController::class, 'store']);
+    Route::post('/devices', [DeviceController::class, 'store']);
+
+    // Shifts, Events, and Driver Profiles (Assignments)
+    Route::apiResource('shifts', ShiftController::class);
+    Route::patch('/shifts/{id}/toggle-status', [ShiftController::class, 'toggleStatus']);
+    
+    Route::apiResource('events', EventController::class);
+    
+    Route::apiResource('driver-profiles', DriverProfileController::class);
+    Route::patch('/driver-profiles/{id}/toggle-status', [DriverProfileController::class, 'toggleStatus']);
+
+    // Complaints
+    Route::post('/complaints', [ComplaintController::class, 'store']);
+    Route::get('/complaints', [ComplaintController::class, 'index']); // For admin
+    Route::get('/complaints/{complaint}', [ComplaintController::class, 'show']);
+    Route::patch('/complaints/{complaint}/status', [ComplaintController::class, 'updateStatus']); // For admin
 
     Route::middleware('is_active')->group(function () {
         // Rutas con Permisos Granulares (Admin o Usuarios con el permiso)
@@ -61,7 +82,6 @@ Route::middleware('auth:api')->group(function () {
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             Route::put('/users/{id}', [UserController::class, 'updateUser']);
             Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
-            Route::post('/users/{id}/restore', [UserController::class, 'restoreUser']);
         });
 
         Route::middleware('permission:manage_admins')->group(function () {
@@ -69,15 +89,13 @@ Route::middleware('auth:api')->group(function () {
         });
 
         Route::middleware('permission:manage_vehicles')->group(function () {
-            Route::apiResource('vehicles', \App\Http\Controllers\VehicleController::class);
-            Route::patch('/vehicles/{id}/toggle-status', [\App\Http\Controllers\VehicleController::class, 'toggleStatus']);
+            Route::apiResource('vehicles', VehicleController::class);
         });
 
         Route::middleware('permission:manage_destinations')->group(function () {
             Route::post('/destinations', [DestinationController::class, 'store']);
             Route::put('/destinations/{id}', [DestinationController::class, 'update']);
             Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
-            Route::post('/destinations/{id}/restore', [DestinationController::class, 'restore']);
             Route::patch('/destinations/{id}/toggle-status', [DestinationController::class, 'toggleStatus']);
         });
 
@@ -92,6 +110,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/trips/{id}/start', [TripController::class, 'start']);
         Route::post('/trips/{tripId}/board/{passengerId}', [TripController::class, 'boardPassenger']);
         Route::post('/trips/{tripId}/dropoff/{passengerId}', [TripController::class, 'dropOffPassenger']);
+        Route::post('/trips/{tripId}/cancel-passenger/{passengerId}', [TripController::class, 'cancelPassenger']);
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
         Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
@@ -100,11 +119,15 @@ Route::middleware('auth:api')->group(function () {
 
         Route::middleware('permission:view_history')->group(function () {
             Route::get('/trips', [TripController::class, 'index']); // Historial Admin Completo
-            Route::get('/trips/history', [TripController::class, 'history']);
         });
+
+        Route::get('/trips/history', [TripController::class, 'history']); // Historial personal (Pasajeros/Conductores)
 
         Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
         Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
+        Route::post('/driver/request-disconnect', [DriverLocationController::class, 'requestDisconnect']);
+        Route::post('/admin/driver/{id}/approve-disconnect', [DriverLocationController::class, 'approveDisconnect']);
+        Route::post('/admin/driver/{id}/reject-disconnect', [DriverLocationController::class, 'rejectDisconnect']);
         Route::get('/drivers/nearby', [DriverLocationController::class, 'getNearbyDrivers']);
         Route::get('/users/drivers', [DriverLocationController::class, 'getOnlineDrivers']);
     });

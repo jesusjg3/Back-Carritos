@@ -11,6 +11,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Repositories\TripRepository;
 
 class TripStarted implements ShouldBroadcastNow
 {
@@ -53,8 +54,8 @@ class TripStarted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
-                    'latitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
-                    'longitude' => app(\App\Repositories\TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
+                    'latitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                 ] : null,
                 'origin' => [
                     'lat' => $this->trip->origin_lat,

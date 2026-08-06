@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             StateSeeder::class,
             DestinationSeeder::class,
+            VehicleSeeder::class,
+            ShiftSeeder::class,
         ]);
 
         $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();

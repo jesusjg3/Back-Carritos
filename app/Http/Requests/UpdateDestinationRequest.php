@@ -19,6 +19,7 @@ class UpdateDestinationRequest extends FormRequest
             'latitude' => 'sometimes|required|numeric|between:-90,90',
             'longitude' => 'sometimes|required|numeric|between:-180,180',
             'address' => 'sometimes|required|string|min:5|max:255',
+            'is_active' => 'sometimes|boolean',
         ];
     }
 

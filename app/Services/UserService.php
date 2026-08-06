@@ -113,9 +113,4 @@ class UserService
         $this->userRepo->delete($id);
         return true;
     }
-
-    public function restoreUser(int $id)
-    {
-        return $this->userRepo->restore($id);
-    }
 }

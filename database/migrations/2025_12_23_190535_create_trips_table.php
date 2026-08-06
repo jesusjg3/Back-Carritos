@@ -20,10 +20,11 @@ return new class extends Migration {
             $table->string('destination_address')->nullable();
             $table->decimal('distance', 10, 2);
             $table->unsignedInteger('passengers_count')->default(1);
-            $table->unsignedInteger('request_attempt')->default(1);
+            $table->integer('request_attempt')->default(0);
             $table->timestamp('accepted_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('finished_at')->nullable();
+            $table->string('cancel_reason')->nullable();
             $table->timestamps();
             $table->softDeletes();
             

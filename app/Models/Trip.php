@@ -18,6 +18,7 @@ class Trip extends Model
         'distance',
         'passengers_count',
         'request_attempt',
+        'cancel_reason',
     ];
 
     public function passengers()

@@ -2,10 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateDriverLocationRequest;
+use App\Http\Requests\GetNearbyDriversRequest;
 use App\Services\LocationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Exception;
+use App\Events\DriverGlobalLocationUpdated;
+use App\Events\TripLocationUpdated;
+use App\Events\DriverOffline;
+use App\Events\DriverDisconnectRequested;
+use App\Events\DriverDisconnectApproved;
+use App\Events\DriverDisconnectRejected;
+use App\Models\Trip;
+use App\Models\State;
 
 class DriverLocationController extends Controller
 {
@@ -17,7 +29,7 @@ class DriverLocationController extends Controller
         $this->locationService = $locationService;
     }
 
-    public function updateDriverLocation(Request $request): JsonResponse
+    public function updateDriverLocation(UpdateDriverLocationRequest $request): JsonResponse
     {
         $user = $request->user();
 
@@ -25,18 +37,23 @@ class DriverLocationController extends Controller
             return response()->json(['error' => 'Solo los conductores pueden actualizar su ubicación'], 403);
         }
 
-        $data = $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-        ]);
+        $data = $request->validated();
 
         $driverId = $user->id;
+        $driverProfile = \App\Models\DriverProfile::where('user_id', $driverId)->with('vehicle')->first();
+        $vehicle = $driverProfile ? $driverProfile->vehicle : null;
+
         $payload = [
             'driver_id' => $driverId,
             'name' => $user->name,
             'latitude' => (float) $data['latitude'],
             'longitude' => (float) $data['longitude'],
             'updated_at' => now()->toIso8601String(),
+            'vehicle' => $vehicle ? [
+                'plate' => $vehicle->plate,
+                'brand' => $vehicle->brand,
+                'status' => $vehicle->status,
+            ] : null,
         ];
 
         Cache::put($this->driverLocationKey($driverId), $payload, now()->addMinutes(30));
@@ -44,22 +61,31 @@ class DriverLocationController extends Controller
         $this->rememberDriverId($driverId);
 
         // Emitir evento para WebSockets
-        broadcast(new \App\Events\DriverGlobalLocationUpdated($driverId, (float) $data['latitude'], (float) $data['longitude']));
+        try {
+            $vStatus = $vehicle ? $vehicle->status : 'active';
+            broadcast(new DriverGlobalLocationUpdated($driverId, (float) $data['latitude'], (float) $data['longitude'], $vStatus));
+        } catch (Exception $e) {
+            Log::error("Error broadcasting DriverGlobalLocationUpdated: " . $e->getMessage());
+        }
 
         // Si el conductor tiene un viaje activo (aceptado o iniciado), emitir evento al pasajero
-        $activeTrip = \App\Models\Trip::where('driver_id', $driverId)
-            ->whereIn('state_id', [\App\Models\State::ACCEPTED, \App\Models\State::STARTED])
+        $activeTrip = Trip::where('driver_id', $driverId)
+            ->whereIn('state_id', [State::ACCEPTED, State::STARTED])
             ->first();
 
         if ($activeTrip) {
-            $status = ($activeTrip->state_id === \App\Models\State::ACCEPTED) ? 'accepted' : 'started';
-            broadcast(new \App\Events\TripLocationUpdated(
-                $activeTrip->id,
-                $driverId,
-                (float) $data['latitude'],
-                (float) $data['longitude'],
-                $status
-            ));
+            $status = ($activeTrip->state_id === State::ACCEPTED) ? 'accepted' : 'started';
+            try {
+                broadcast(new TripLocationUpdated(
+                    $activeTrip->id,
+                    $driverId,
+                    (float) $data['latitude'],
+                    (float) $data['longitude'],
+                    $status
+                ));
+            } catch (Exception $e) {
+                Log::error("Error broadcasting TripLocationUpdated: " . $e->getMessage());
+            }
         }
 
         return response()->json([
@@ -82,18 +108,66 @@ class DriverLocationController extends Controller
         $this->forgetDriverId($driverId);
 
         // Emitir evento para desconectar al conductor inmediatamente
-        broadcast(new \App\Events\DriverOffline($driverId));
+        try {
+            broadcast(new DriverOffline($driverId));
+        } catch (Exception $e) {
+            Log::error("Error broadcasting DriverOffline: " . $e->getMessage());
+        }
 
         return response()->json(['message' => 'Conductor marcado como offline']);
     }
 
-    public function getNearbyDrivers(Request $request): JsonResponse
+    public function requestDisconnect(Request $request): JsonResponse
     {
+        $user = $request->user();
+
+        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $data = $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'radius' => 'nullable|numeric|min:0.1|max:500',
+            'reason' => 'required|string|max:255',
         ]);
+
+        try {
+            broadcast(new DriverDisconnectRequested($user, $data['reason']));
+        } catch (Exception $e) {
+            Log::error("Error broadcasting DriverDisconnectRequested: " . $e->getMessage());
+        }
+
+        return response()->json(['message' => 'Solicitud de desconexión enviada al administrador.']);
+    }
+
+    public function approveDisconnect(int $driverId): JsonResponse
+    {
+        Cache::forget($this->driverLocationKey($driverId));
+        Cache::forget($this->driverOnlineKey($driverId));
+        $this->forgetDriverId($driverId);
+
+        try {
+            broadcast(new DriverOffline($driverId));
+            broadcast(new DriverDisconnectApproved($driverId));
+        } catch (Exception $e) {
+            Log::error("Error broadcasting disconnect approved: " . $e->getMessage());
+        }
+
+        return response()->json(['message' => 'Desconexión del conductor aprobada.']);
+    }
+
+    public function rejectDisconnect(int $driverId): JsonResponse
+    {
+        try {
+            broadcast(new DriverDisconnectRejected($driverId));
+        } catch (Exception $e) {
+            Log::error("Error broadcasting disconnect rejected: " . $e->getMessage());
+        }
+
+        return response()->json(['message' => 'Desconexión del conductor rechazada.']);
+    }
+
+    public function getNearbyDrivers(GetNearbyDriversRequest $request): JsonResponse
+    {
+        $data = $request->validated();
 
         $centerLatitude = (float) $data['latitude'];
         $centerLongitude = (float) $data['longitude'];
@@ -104,6 +178,11 @@ class DriverLocationController extends Controller
             $location = Cache::get($this->driverLocationKey($driverId));
 
             if (!is_array($location)) {
+                continue;
+            }
+
+            // Skip drivers whose vehicle is in maintenance
+            if (isset($location['vehicle']) && $location['vehicle']['status'] === 'maintenance') {
                 continue;
             }
 
@@ -148,6 +227,7 @@ class DriverLocationController extends Controller
                     'longitude' => (float) $location['longitude'],
                     'location_updated_at' => $location['updated_at'],
                     'is_online' => true,
+                    'vehicle' => $location['vehicle'] ?? null,
                 ];
             }
         }
