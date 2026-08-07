@@ -18,9 +18,11 @@ class DriverProfileController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $search = $request->input('search');
-        $perPage = $request->input('per_page', 10);
-        $profiles = $this->driverProfileService->getAllProfiles($search, $perPage);
+        $search = $request->query('search');
+        $perPage = $request->query('per_page', 10);
+        $status = $request->query('status');
+        
+        $profiles = $this->driverProfileService->getAllProfiles($search, $perPage, $status);
         return response()->json($profiles, 200);
     }
 

@@ -16,9 +16,13 @@ class DriverProfileRepository
             ->first();
     }
     
-    public function all($search = null, $perPage = 10): LengthAwarePaginator
+    public function all($search = null, $perPage = 10, $status = null): LengthAwarePaginator | array
     {
-        $query = DriverProfile::with(['user', 'shift', 'vehicle']);
+        $query = DriverProfile::withTrashed()->with([
+            'user' => fn($q) => $q->select('id', 'name', 'email')->withTrashed(),
+            'shift' => fn($q) => $q->select('id', 'name', 'start_time', 'end_time')->withTrashed(),
+            'vehicle' => fn($q) => $q->select('id', 'brand', 'model', 'plate')->withTrashed()
+        ]);
 
         if ($search) {
             $query->whereHas('user', function ($q) use ($search) {
@@ -26,13 +30,45 @@ class DriverProfileRepository
             });
         }
 
-        return $query->orderBy('id', 'desc')->paginate($perPage);
+        if ($status !== null) {
+            if ($status === 'active') {
+                $query->where('is_active', true)->whereNull('deleted_at');
+            } elseif ($status === 'deleted') {
+                $query->whereNotNull('deleted_at');
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false)->whereNull('deleted_at');
+            }
+        }
+
+        $baseCountQuery = DriverProfile::withTrashed();
+        if ($search) {
+            $baseCountQuery->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'ilike', '%' . $search . '%');
+            });
+        }
+
+        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
+        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+
+        $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
+                           ->orderBy('id', 'desc')
+                           ->paginate($perPage);
+        $result = $paginator->toArray();
+        $result['total_registrados'] = (clone $baseCountQuery)->count();
+        $result['total_inactivos'] = $totalInactive;
+        $result['total_eliminados'] = $totalDeleted;
+
+        return $result;
     }
 
     public function find(int $id)
     {
-        $profile = DriverProfile::findOrFail($id);
-        $profile->load(['user', 'shift', 'vehicle']);
+        $profile = DriverProfile::withTrashed()->findOrFail($id);
+        $profile->load([
+            'user' => fn($q) => $q->select('id', 'name', 'email')->withTrashed(),
+            'shift' => fn($q) => $q->select('id', 'name', 'start_time', 'end_time')->withTrashed(),
+            'vehicle' => fn($q) => $q->select('id', 'brand', 'model', 'plate')->withTrashed()
+        ]);
         return $profile;
     }
 

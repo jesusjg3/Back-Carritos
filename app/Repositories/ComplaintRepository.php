@@ -6,9 +6,30 @@ use App\Models\Complaint;
 
 class ComplaintRepository
 {
-    public function all()
+    public function all($perPage = 10, $status = null)
     {
-        return Complaint::with(['user', 'trip'])->orderBy('created_at', 'desc')->get();
+        $query = Complaint::with([
+            'user' => fn($q) => $q->select('id', 'name'),
+            'trip' => fn($q) => $q->select('id')
+        ])->orderBy('created_at', 'desc');
+
+        $baseCountQuery = clone $query;
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $totalPending = (clone $baseCountQuery)->where('status', 'pending')->count();
+        $totalResolved = (clone $baseCountQuery)->where('status', 'resolved')->count();
+        $totalDismissed = (clone $baseCountQuery)->where('status', 'dismissed')->count();
+
+        $paginator = $query->paginate($perPage);
+        $result = $paginator->toArray();
+        $result['total_pending'] = $totalPending;
+        $result['total_resolved'] = $totalResolved;
+        $result['total_dismissed'] = $totalDismissed;
+
+        return $result;
     }
 
     public function find($id)

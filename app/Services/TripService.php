@@ -71,7 +71,13 @@ class TripService
             ];
         });
 
-        return $paginator;
+        $stats = $this->tripRepo->getStats($search);
+
+        $result = $paginator->toArray();
+        $result['total_terminados'] = $stats['total_terminados'];
+        $result['total_cancelados'] = $stats['total_cancelados'];
+
+        return $result;
     }
 
     public function requestTrip(array $data, User $user)

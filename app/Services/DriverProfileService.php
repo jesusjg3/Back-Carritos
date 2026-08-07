@@ -13,9 +13,9 @@ class DriverProfileService
         $this->driverProfileRepo = $driverProfileRepo;
     }
 
-    public function getAllProfiles($search = null, $perPage = 10)
+    public function getAllProfiles($search = null, $perPage = 10, $status = null)
     {
-        return $this->driverProfileRepo->all($search, $perPage);
+        return $this->driverProfileRepo->all($search, $perPage, $status);
     }
 
     public function getProfileById(int $id)

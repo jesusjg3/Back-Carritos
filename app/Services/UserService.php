@@ -110,6 +110,11 @@ class UserService
             throw new \Exception('No se puede eliminar la cuenta del Super Administrador.');
         }
 
+        $user = $this->userRepo->find($id);
+        if ($user->driverProfile()->exists()) {
+            throw new \Exception('No se puede eliminar el conductor porque tiene una asignación activa.');
+        }
+
         $this->userRepo->delete($id);
         return true;
     }

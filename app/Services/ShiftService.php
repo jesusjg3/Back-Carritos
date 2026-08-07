@@ -13,9 +13,9 @@ class ShiftService
         $this->shiftRepo = $shiftRepo;
     }
 
-    public function getAllShifts($search = null, $perPage = 10)
+    public function getAllShifts($search = null, $perPage = 10, $status = null)
     {
-        return $this->shiftRepo->all($search, $perPage);
+        return $this->shiftRepo->all($search, $perPage, $status);
     }
 
     public function getShiftById(int $id)
@@ -35,6 +35,10 @@ class ShiftService
 
     public function deleteShift(int $id)
     {
+        $shift = $this->shiftRepo->find($id);
+        if ($shift->driverProfiles()->exists()) {
+            throw new \Exception('No se puede eliminar el horario porque está asignado a un conductor.');
+        }
         return $this->shiftRepo->delete($id);
     }
 

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreComplaintRequest;
 use App\Http\Requests\UpdateComplaintStatusRequest;
 use App\Services\ComplaintService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ComplaintController extends Controller
@@ -17,9 +18,11 @@ class ComplaintController extends Controller
         $this->complaintService = $complaintService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $complaints = $this->complaintService->getAllComplaints();
+        $perPage = $request->query('per_page', 10);
+        $status = $request->query('status');
+        $complaints = $this->complaintService->getAllComplaints($perPage, $status);
         return response()->json($complaints, 200);
     }
 

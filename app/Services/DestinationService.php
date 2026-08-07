@@ -32,18 +32,9 @@ class DestinationService
         if (isset($filters['per_page'])) {
             $perPage = (int) $filters['per_page'];
             $search = $filters['search'] ?? null;
+            $status = $filters['status'] ?? null;
 
-            $isActive = null;
-            if (isset($filters['is_active'])) {
-                $isActiveStr = $filters['is_active'];
-                if ($isActiveStr === 'true' || $isActiveStr === '1') {
-                    $isActive = true;
-                } elseif ($isActiveStr === 'false' || $isActiveStr === '0') {
-                    $isActive = false;
-                }
-            }
-
-            return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $isActive);
+            return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $status);
         }
 
         if ($user && $user->rol_id === 1) {

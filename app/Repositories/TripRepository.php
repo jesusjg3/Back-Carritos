@@ -62,6 +62,23 @@ class TripRepository
         return Trip::findOrFail($id);
     }
 
+    public function getStats(?string $search = null): array
+    {
+        $baseCountQuery = Trip::query();
+        if ($search) {
+            $baseCountQuery->where(function ($subQuery) use ($search) {
+                $subQuery->where('id', 'like', "%{$search}%")
+                    ->orWhere('origin_address', 'ilike', "%{$search}%")
+                    ->orWhere('destination_address', 'ilike', "%{$search}%");
+            });
+        }
+
+        return [
+            'total_terminados' => (clone $baseCountQuery)->whereHas('state', function($q){ $q->where('state_name', 'TERMINADO'); })->count(),
+            'total_cancelados' => (clone $baseCountQuery)->whereHas('state', function($q){ $q->where('state_name', 'CANCELADO'); })->count(),
+        ];
+    }
+
     public function create(array $data): Trip
     {
         return Trip::create($data);

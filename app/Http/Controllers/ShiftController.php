@@ -19,10 +19,13 @@ class ShiftController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $search = $request->input('search');
-        $perPage = $request->input('per_page', 10);
-        $shifts = $this->shiftService->getAllShifts($search, $perPage);
-        return response()->json($shifts, 200);
+        $search = $request->query('search');
+        $perPage = $request->query('per_page', 10);
+        $status = $request->query('status');
+
+        $shifts = $this->shiftService->getAllShifts($search, $perPage, $status);
+
+        return response()->json($shifts);
     }
 
     public function store(StoreShiftRequest $request): JsonResponse

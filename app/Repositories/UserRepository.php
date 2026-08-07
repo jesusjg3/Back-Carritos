@@ -15,7 +15,7 @@ class UserRepository
 
     public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        $query = User::with(['rol', 'ratingProfile']);
+        $query = User::withTrashed()->with(['rol', 'ratingProfile', 'driverProfile.shift']);
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -37,14 +37,35 @@ class UserRepository
         if ($status !== null) {
             if ($status === 'active') {
                 $query->where('is_active', true)->whereNull('deleted_at');
-            } elseif ($status === 'suspended') {
+            } elseif ($status === 'deleted') {
                 $query->whereNotNull('deleted_at');
             } elseif ($status === 'inactive') {
                 $query->where('is_active', false)->whereNull('deleted_at');
             }
         }
 
-        $paginator = $query->paginate($perPage);
+        $baseCountQuery = User::withTrashed();
+        if ($search) {
+            $baseCountQuery->where(function ($subQuery) use ($search) {
+                $subQuery->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%");
+            });
+        }
+        if ($roleId) {
+            $baseCountQuery->where('rol_id', $roleId);
+        }
+        if ($roleName) {
+            $baseCountQuery->whereHas('rol', function ($subQuery) use ($roleName) {
+                $subQuery->where('rol_name', $roleName);
+            });
+        }
+
+        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
+        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+
+        $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
+                           ->orderBy('id', 'desc')
+                           ->paginate($perPage);
 
         $paginator->getCollection()->transform(function ($user) {
             $roleName = $user->rol ? strtolower($user->rol->rol_name) : 'pasajero';
@@ -61,12 +82,29 @@ class UserRepository
 
             if ($roleName === 'conductor') {
                 $data['score'] = $user->ratingProfile ? $user->ratingProfile->score : 5.0;
+                
+                if ($user->driverProfile && $user->driverProfile->shift) {
+                    $shift = $user->driverProfile->shift;
+                    $now = now()->format('H:i:s');
+                    $data['is_in_shift'] = $now >= $shift->start_time && $now <= $shift->end_time;
+                    $data['shift_id'] = $shift->id;
+                    $data['shift_name'] = $shift->name;
+                } else {
+                    $data['is_in_shift'] = false;
+                    $data['shift_id'] = null;
+                    $data['shift_name'] = null;
+                }
             }
 
             return $data;
         });
 
-        return $paginator;
+        $result = $paginator->toArray();
+        $result['total_registrados'] = (clone $baseCountQuery)->count();
+        $result['total_inactivos'] = $totalInactive;
+        $result['total_eliminados'] = $totalDeleted;
+
+        return $result;
     }
 
     public function find($id)

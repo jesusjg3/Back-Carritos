@@ -35,6 +35,10 @@ class VehicleService
 
     public function deleteVehicle(int $id)
     {
+        $vehicle = $this->vehicleRepo->find($id);
+        if ($vehicle->driverProfiles()->exists()) {
+            throw new \Exception('No se puede eliminar el vehículo porque está asignado a un conductor.');
+        }
         return $this->vehicleRepo->delete($id);
     }
 }
