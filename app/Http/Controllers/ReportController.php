@@ -189,4 +189,125 @@ class ReportController extends Controller
             return response()->json(['error' => 'Ocurrió un error interno al obtener las coordenadas.'], 500);
         }
     }
+
+    private function streamCsv(string $filename, array $columns, array $data)
+    {
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $callback = function() use ($data, $columns) {
+            $file = fopen('php://output', 'w');
+            // Agregamos BOM para que Excel reconozca correctamente UTF-8
+            fputs($file, "\xEF\xBB\xBF");
+            fputcsv($file, $columns);
+            foreach ($data as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportDriversReport(Request $request)
+    {
+        try {
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            
+            $summary = $this->reportService->getDriversSummary(null, null, $startDate, $endDate);
+            
+            $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Completados', 'Viajes Cancelados', 'Total Pasajeros', 'Promedio Pasajeros', 'Duración Promedio (min)', 'Estado'];
+            $data = [];
+            
+            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+
+            foreach ($items as $item) {
+                $data[] = [
+                    $item['id'] ?? '',
+                    $item['name'] ?? '',
+                    $item['email'] ?? '',
+                    ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
+                    $item['completed_trips'] ?? 0,
+                    $item['canceled_trips'] ?? 0,
+                    $item['total_passengers'] ?? 0,
+                    $item['avg_passengers'] ?? 0,
+                    $item['avg_duration_minutes'] ?? 0,
+                    (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
+                ];
+            }
+            
+            return $this->streamCsv('reporte_conductores.csv', $columns, $data);
+        } catch (Exception $exception) {
+            Log::error('Error in exportDriversReport: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        }
+    }
+
+    public function exportPassengersReport(Request $request)
+    {
+        try {
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            
+            $summary = $this->reportService->getPassengersSummary(null, null, $startDate, $endDate);
+            
+            $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Tomados', 'Viajes Cancelados', 'Estado'];
+            $data = [];
+            
+            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+
+            foreach ($items as $item) {
+                $data[] = [
+                    $item['id'] ?? '',
+                    $item['name'] ?? '',
+                    $item['email'] ?? '',
+                    ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
+                    $item['completed_trips'] ?? 0,
+                    $item['canceled_trips'] ?? 0,
+                    (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
+                ];
+            }
+            
+            return $this->streamCsv('reporte_pasajeros.csv', $columns, $data);
+        } catch (Exception $exception) {
+            Log::error('Error in exportPassengersReport: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        }
+    }
+
+    public function exportRoutesReport(Request $request)
+    {
+        try {
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            
+            $summary = $this->reportService->getRoutesDetailsSummary(null, null, $startDate, $endDate);
+            
+            $columns = ['Origen', 'Destino', 'Viajes Completados', 'Viajes Cancelados', 'Duración Promedio (min)'];
+            $data = [];
+            
+            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+
+            foreach ($items as $item) {
+                $data[] = [
+                    $item['origin_address'] ?? 'Desconocido',
+                    $item['destination_address'] ?? 'Desconocido',
+                    $item['completed_trips'] ?? 0,
+                    $item['canceled_trips'] ?? 0,
+                    $item['avg_duration_minutes'] ?? 0,
+                ];
+            }
+            
+            return $this->streamCsv('reporte_rutas.csv', $columns, $data);
+        } catch (Exception $exception) {
+            Log::error('Error in exportRoutesReport: ' . $exception->getMessage());
+            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        }
+    }
 }

@@ -61,6 +61,7 @@ Route::middleware('auth:api')->group(function () {
         Route::middleware('permission:view_driver_reports')->group(function () {
             Route::get('/reports/drivers-summary', [ReportController::class, 'driversSummary']);
             Route::get('/reports/ratings-distribution', [ReportController::class, 'ratingsDistribution']);
+            Route::get('/reports/export/drivers', [ReportController::class, 'exportDriversReport']);
         });
 
         Route::middleware('permission:view_route_reports')->group(function () {
@@ -70,10 +71,12 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/reports/routes-performance', [ReportController::class, 'routesPerformance']);
             Route::get('/reports/routes-details', [ReportController::class, 'routesDetailsSummary']);
             Route::get('/reports/trips-coordinates', [ReportController::class, 'tripsCoordinates']);
+            Route::get('/reports/export/routes', [ReportController::class, 'exportRoutesReport']);
         });
 
         Route::middleware('permission:view_passenger_reports')->group(function () {
             Route::get('/reports/passengers-summary', [ReportController::class, 'passengersSummary']);
+            Route::get('/reports/export/passengers', [ReportController::class, 'exportPassengersReport']);
         });
 
         Route::middleware('permission:manage_users')->group(function () {
