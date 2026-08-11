@@ -23,6 +23,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_vehicles', 'description' => 'Permite gestionar la flota de vehículos'],
             ['name' => 'manage_destinations', 'description' => 'Permite gestionar las paradas y destinos'],
             ['name' => 'view_history', 'description' => 'Permite visualizar el historial completo de viajes'],
+            ['name' => 'manage_shifts', 'description' => 'Permite gestionar los horarios de conductores'],
+            ['name' => 'manage_assignments', 'description' => 'Permite gestionar las asignaciones de vehículos a conductores'],
+            ['name' => 'manage_events', 'description' => 'Permite gestionar los eventos de la universidad'],
+            ['name' => 'manage_disconnects', 'description' => 'Permite gestionar las solicitudes de desconexión'],
         ];
 
         foreach ($permissions as $perm) {

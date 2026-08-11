@@ -129,6 +129,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
         Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
         Route::post('/driver/request-disconnect', [DriverLocationController::class, 'requestDisconnect']);
+        Route::get('/admin/disconnect-requests', [DriverLocationController::class, 'getAllDisconnectRequests']);
         Route::post('/admin/driver/{id}/approve-disconnect', [DriverLocationController::class, 'approveDisconnect']);
         Route::post('/admin/driver/{id}/reject-disconnect', [DriverLocationController::class, 'rejectDisconnect']);
         Route::get('/drivers/nearby', [DriverLocationController::class, 'getNearbyDrivers']);

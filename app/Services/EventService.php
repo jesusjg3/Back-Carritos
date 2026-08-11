@@ -13,9 +13,9 @@ class EventService
         $this->eventRepo = $eventRepo;
     }
 
-    public function getAllEvents()
+    public function getAllEvents($itemsPerPage = 15)
     {
-        return $this->eventRepo->all();
+        return $this->eventRepo->all($itemsPerPage);
     }
 
     public function getEventById(int $id)

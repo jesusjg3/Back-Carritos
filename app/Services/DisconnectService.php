@@ -38,11 +38,8 @@ class DisconnectService
     public function approveDisconnect(int $driverId): void
     {
         $driverUser = User::find($driverId);
-        
-        if ($driverUser) {
-            // Revoke tokens to force logout
-            $driverUser->tokens()->delete();
-        }
+        // No es posible revocar tokens JWT específicos desde el lado del administrador sin el token exacto
+        // o sin una tabla de lista negra, por lo que simplemente lo marcamos offline.
 
         $this->disconnectRequestRepository->updateStatus($driverId, 'approved');
         
@@ -78,11 +75,24 @@ class DisconnectService
         return $this->disconnectRequestRepository->hasPendingRequest($driverId);
     }
 
-    /**
-     * Get all drivers with pending requests.
-     */
     public function getPendingDriverIds(): array
     {
         return $this->disconnectRequestRepository->getPendingDriverIds();
+    }
+
+    /**
+     * Get paginated disconnect requests.
+     */
+    public function getPaginatedRequests(int $perPage = 10, ?string $status = null)
+    {
+        return $this->disconnectRequestRepository->getPaginatedRequests($perPage, $status);
+    }
+
+    /**
+     * Get global stats for disconnect requests.
+     */
+    public function getGlobalStats(): array
+    {
+        return $this->disconnectRequestRepository->getGlobalStats();
     }
 }

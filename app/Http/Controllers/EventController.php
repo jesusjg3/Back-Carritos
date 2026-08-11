@@ -6,6 +6,7 @@ use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Services\EventService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
@@ -16,9 +17,10 @@ class EventController extends Controller
         $this->eventService = $eventService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $events = $this->eventService->getAllEvents();
+        $itemsPerPage = $request->query('per_page', 15);
+        $events = $this->eventService->getAllEvents($itemsPerPage);
         return response()->json($events, 200);
     }
 

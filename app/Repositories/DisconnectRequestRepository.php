@@ -48,13 +48,38 @@ class DisconnectRequestRepository
             ->update(['status' => $status]) > 0;
     }
 
-    /**
-     * Get all drivers with pending requests.
-     */
     public function getPendingDriverIds(): array
     {
         return DisconnectRequest::where('status', 'pending')
             ->pluck('driver_id')
             ->toArray();
+    }
+
+    /**
+     * Get paginated disconnect requests.
+     */
+    public function getPaginatedRequests(int $perPage = 10, ?string $status = null)
+    {
+        $query = DisconnectRequest::with(['driver' => function ($query) {
+            $query->select('id', 'name', 'email'); // only fetch important fields
+        }])->select('id', 'driver_id', 'reason', 'status', 'created_at', 'updated_at')
+          ->orderBy('created_at', 'desc');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get global stats for disconnect requests.
+     */
+    public function getGlobalStats(): array
+    {
+        return [
+            'total_aprobados' => DisconnectRequest::where('status', 'approved')->count(),
+            'total_rechazados' => DisconnectRequest::where('status', 'rejected')->count(),
+        ];
     }
 }

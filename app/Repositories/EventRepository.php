@@ -7,14 +7,22 @@ use Illuminate\Support\Facades\DB;
 
 class EventRepository
 {
-    public function all()
+    public function all($itemsPerPage = 15)
     {
-        return Event::with(['assignments.user', 'assignments.vehicle', 'assignments.shift'])->orderBy('start_date', 'asc')->get();
+        return Event::with([
+            'assignments.user:id,name,email,rol_id',
+            'assignments.vehicle:id,plate,brand',
+            'assignments.shift:id,name,start_time,end_time'
+        ])->orderBy('start_date', 'asc')->paginate($itemsPerPage);
     }
 
     public function find($id)
     {
-        return Event::with(['assignments.user', 'assignments.vehicle', 'assignments.shift'])->findOrFail($id);
+        return Event::with([
+            'assignments.user:id,name,email,rol_id',
+            'assignments.vehicle:id,plate,brand',
+            'assignments.shift:id,name,start_time,end_time'
+        ])->findOrFail($id);
     }
 
     public function create(array $data)

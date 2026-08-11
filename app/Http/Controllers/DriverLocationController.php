@@ -117,4 +117,24 @@ class DriverLocationController extends Controller
 
         return response()->json($drivers);
     }
+
+    public function getAllDisconnectRequests(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user || $user->rol_id !== 1) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $status = $request->input('status');
+
+        $requests = $this->disconnectService->getPaginatedRequests($perPage, $status);
+        $stats = $this->disconnectService->getGlobalStats();
+
+        // Convert the paginator to an array and merge stats
+        $response = $requests->toArray();
+        $response = array_merge($response, $stats);
+
+        return response()->json($response);
+    }
 }
