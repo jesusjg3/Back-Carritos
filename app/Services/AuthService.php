@@ -11,11 +11,13 @@ class AuthService
 {
     protected UserRepository $userRepo;
     protected AssignmentRepository $assignmentRepo;
+    protected LocationService $locationService;
 
-    public function __construct(UserRepository $userRepo, AssignmentRepository $assignmentRepo)
+    public function __construct(UserRepository $userRepo, AssignmentRepository $assignmentRepo, LocationService $locationService)
     {
         $this->userRepo = $userRepo;
         $this->assignmentRepo = $assignmentRepo;
+        $this->locationService = $locationService;
     }
 
     public function login(string $email, string $password)
@@ -33,6 +35,7 @@ class AuthService
             throw new \Exception('Su cuenta ha sido desactivada.');
         }
 
+        $assignment = null;
         // Validate driver constraints
         if ($user->rol && $user->rol->rol_name === 'conductor') {
             $assignment = $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
@@ -69,9 +72,9 @@ class AuthService
             $hasActiveEvent = $assignment->events->isNotEmpty();
 
             if ($assignment->shift && !$hasActiveEvent) {
-                $now = \Carbon\Carbon::now('America/Guayaquil');
-                $startTime = \Carbon\Carbon::parse($assignment->shift->start_time, 'America/Guayaquil');
-                $endTime = \Carbon\Carbon::parse($assignment->shift->end_time, 'America/Guayaquil');
+                $now = \Carbon\Carbon::now();
+                $startTime = \Carbon\Carbon::parse($assignment->shift->start_time);
+                $endTime = \Carbon\Carbon::parse($assignment->shift->end_time);
 
                 if ($endTime->lessThan($startTime)) {
                     // Shift spans across midnight
@@ -89,7 +92,7 @@ class AuthService
             }
         }
 
-        $response = $this->respondWithToken($token, $user);
+        $response = $this->respondWithToken($token, $user, $assignment);
 
         return $response;
     }
@@ -113,14 +116,14 @@ class AuthService
     {
         $user = auth('api')->user();
         if ($user && $user->rol && $user->rol->rol_name === 'conductor') {
-            app(\App\Services\LocationService::class)->setDriverOffline($user->id);
+            $this->locationService->setDriverOffline($user->id);
         }
         
         auth('api')->logout();
         return true;
     }
 
-    protected function respondWithToken($token, $user = null)
+    protected function respondWithToken($token, $user = null, $assignment = null)
     {
         $user = $user ?? auth('api')->user();
 
@@ -130,7 +133,7 @@ class AuthService
         
         $isMaintenance = false;
         if ($user->rol && $user->rol->rol_name === 'conductor') {
-            $assignment = $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
+            $assignment = $assignment ?? $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
             if ($assignment && $assignment->vehicle && $assignment->vehicle->status === 'maintenance') {
                 $isMaintenance = true;
             }

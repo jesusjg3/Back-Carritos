@@ -66,17 +66,20 @@ class TripRepository
     public function getStats(?string $search = null): array
     {
         $baseCountQuery = Trip::query();
-        if ($search) {
-            $baseCountQuery->where(function ($subQuery) use ($search) {
-                $subQuery->where('id', 'like', "%{$search}%")
-                    ->orWhere('origin_address', 'ilike', "%{$search}%")
-                    ->orWhere('destination_address', 'ilike', "%{$search}%");
-            });
-        }
+
+
+        $counts = (clone $baseCountQuery)
+            ->join('states', 'trips.state_id', '=', 'states.id')
+            ->selectRaw("
+                COUNT(*) as total_registrados,
+                COUNT(CASE WHEN states.state_name = 'TERMINADO' THEN 1 END) as total_terminados,
+                COUNT(CASE WHEN states.state_name = 'CANCELADO' THEN 1 END) as total_cancelados
+            ")->first();
 
         return [
-            'total_terminados' => (clone $baseCountQuery)->whereHas('state', function($q){ $q->where('state_name', 'TERMINADO'); })->count(),
-            'total_cancelados' => (clone $baseCountQuery)->whereHas('state', function($q){ $q->where('state_name', 'CANCELADO'); })->count(),
+            'total_registrados' => (int) ($counts->total_registrados ?? 0),
+            'total_terminados' => (int) ($counts->total_terminados ?? 0),
+            'total_cancelados' => (int) ($counts->total_cancelados ?? 0),
         ];
     }
 
@@ -129,11 +132,18 @@ class TripRepository
 
     public function findActiveTripsForRoute(string $destinationAddress, int $availableSeatsRequired = 1)
     {
-        return Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
-            ->where('destination_address', $destinationAddress)
-            // Filtramos aquellos viajes donde el número de asientos ocupados más los que pide el nuevo no exceda un límite (ej. 4)
-            ->whereRaw('COALESCE((SELECT COUNT(*) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= 4', [$availableSeatsRequired])
-            ->orderBy('created_at', 'desc')
+        return Trip::select('trips.*')
+            ->join('assignments', function ($join) {
+                $join->on('trips.driver_id', '=', 'assignments.user_id')
+                     ->where('assignments.is_active', true);
+            })
+            ->join('vehicles', 'assignments.vehicle_id', '=', 'vehicles.id')
+            ->whereIn('trips.state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
+            ->where('trips.destination_address', $destinationAddress)
+            // Filtramos aquellos viajes donde el número de asientos ocupados más los que pide el nuevo no exceda la capacidad del vehículo
+            ->whereRaw('COALESCE((SELECT COUNT(*) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= vehicles.capacity', [$availableSeatsRequired])
+            ->orderBy('trips.created_at', 'desc')
+            ->lockForUpdate()
             ->get();
     }
 

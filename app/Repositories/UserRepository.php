@@ -45,12 +45,7 @@ class UserRepository
         }
 
         $baseCountQuery = User::withTrashed();
-        if ($search) {
-            $baseCountQuery->where(function ($subQuery) use ($search) {
-                $subQuery->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%");
-            });
-        }
+
         if ($roleId) {
             $baseCountQuery->where('rol_id', $roleId);
         }
@@ -60,9 +55,11 @@ class UserRepository
             });
         }
 
-        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
-        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
-
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN is_active = false AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
         $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
                            ->orderBy('id', 'desc')
                            ->paginate($perPage);
@@ -100,9 +97,9 @@ class UserRepository
         });
 
         $result = $paginator->toArray();
-        $result['total_registrados'] = (clone $baseCountQuery)->count();
-        $result['total_inactivos'] = $totalInactive;
-        $result['total_eliminados'] = $totalDeleted;
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
 
         return $result;
     }
@@ -148,6 +145,19 @@ class UserRepository
             ['user_id' => $userId],
             ['score' => 5.0, 'rating_count' => 0]
         );
+    }
+
+    public function getRatingProfileForUpdate(int $userId)
+    {
+        $ratingProfile = UserRating::where('user_id', $userId)->lockForUpdate()->first();
+        if (!$ratingProfile) {
+            $ratingProfile = UserRating::create([
+                'user_id' => $userId, 
+                'score' => 5.0, 
+                'rating_count' => 0
+            ]);
+        }
+        return $ratingProfile;
     }
 
     public function updateRatingProfile(int $userId, float $score, int $ratingCount)

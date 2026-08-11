@@ -58,12 +58,21 @@ class DisconnectRequestRepository
     /**
      * Get paginated disconnect requests.
      */
-    public function getPaginatedRequests(int $perPage = 10, ?string $status = null)
+    public function getPaginatedRequests(int $perPage = 10, ?string $status = null, ?string $search = null)
     {
         $query = DisconnectRequest::with(['driver' => function ($query) {
             $query->select('id', 'name', 'email'); // only fetch important fields
         }])->select('id', 'driver_id', 'reason', 'status', 'created_at', 'updated_at')
           ->orderBy('created_at', 'desc');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('reason', 'ilike', '%' . $search . '%')
+                  ->orWhereHas('driver', function ($q2) use ($search) {
+                      $q2->where('name', 'ilike', '%' . $search . '%');
+                  });
+            });
+        }
 
         if ($status) {
             $query->where('status', $status);
@@ -77,9 +86,16 @@ class DisconnectRequestRepository
      */
     public function getGlobalStats(): array
     {
+        $counts = DisconnectRequest::selectRaw("
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN status = 'approved' THEN 1 END) as total_aprobados,
+            COUNT(CASE WHEN status = 'rejected' THEN 1 END) as total_rechazados
+        ")->first();
+
         return [
-            'total_aprobados' => DisconnectRequest::where('status', 'approved')->count(),
-            'total_rechazados' => DisconnectRequest::where('status', 'rejected')->count(),
+            'total_registrados' => (int) ($counts->total_registrados ?? 0),
+            'total_aprobados' => (int) ($counts->total_aprobados ?? 0),
+            'total_rechazados' => (int) ($counts->total_rechazados ?? 0),
         ];
     }
 }

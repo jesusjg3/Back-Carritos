@@ -39,12 +39,7 @@ class ReportRepository
             )
             ->groupBy('users.id', 'users.name', 'users.email', 'user_ratings.score', 'user_ratings.rating_count', 'users.is_active');
 
-        if ($startDate) {
-            $query->where('trips.created_at', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->where('trips.created_at', '<=', $endDate . ' 23:59:59');
-        }
+        $this->applyDateFilters($query, $startDate, $endDate, 'trips.created_at');
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -66,8 +61,7 @@ class ReportRepository
     public function getCompletedTripsCount(?string $startDate = null, ?string $endDate = null): int
     {
         $query = Trip::where('state_id', State::FINISHED);
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
         return $query->count();
     }
 
@@ -78,8 +72,7 @@ class ReportRepository
     {
         $query = Trip::where('state_id', State::FINISHED)
                      ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada']);
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select(
                     'destination_address',
@@ -99,8 +92,7 @@ class ReportRepository
     public function getHourlySummary(?string $startDate = null, ?string $endDate = null): array
     {
         $query = Trip::where('state_id', State::FINISHED);
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select(
                     DB::raw('CAST(EXTRACT(HOUR FROM created_at) AS INTEGER) as hour'),
@@ -120,15 +112,7 @@ class ReportRepository
     {
         $query = Trip::where('state_id', State::FINISHED);
 
-        if ($startDate) {
-            $query->where('created_at', '>=', $startDate);
-        } else {
-            $query->where('created_at', '>=', now()->subDays(15));
-        }
-
-        if ($endDate) {
-            $query->where('created_at', '<=', $endDate . ' 23:59:59');
-        }
+        $this->applyDateFilters($query, $startDate, $endDate, 'created_at', now()->subDays(15));
 
         return $query->select(
                     DB::raw('DATE(created_at) as date'),
@@ -146,8 +130,7 @@ class ReportRepository
     public function getRatingsDistribution(?string $startDate = null, ?string $endDate = null): array
     {
         $query = DB::table('trip_ratings');
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select(
                 DB::raw('CAST(rating AS INTEGER) as stars'),
@@ -167,8 +150,7 @@ class ReportRepository
         $query = DB::table('trip_ratings')
             ->join('users', 'trip_ratings.emitter_id', '=', 'users.id');
 
-        if ($startDate) $query->where('trip_ratings.created_at', '>=', $startDate);
-        if ($endDate) $query->where('trip_ratings.created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate, 'trip_ratings.created_at');
 
         return $query->select(
                 'trip_ratings.rating',
@@ -193,15 +175,7 @@ class ReportRepository
                      ->whereNotIn('origin_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
                      ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada']);
 
-        if ($startDate) {
-            $query->where('created_at', '>=', $startDate);
-        } else {
-            $query->where('created_at', '>=', now()->subDays(15));
-        }
-
-        if ($endDate) {
-            $query->where('created_at', '<=', $endDate . ' 23:59:59');
-        }
+        $this->applyDateFilters($query, $startDate, $endDate, 'created_at', now()->subDays(15));
 
         return $query->select(
                     'origin_address',
@@ -229,8 +203,7 @@ class ReportRepository
             ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
             ->groupBy('origin_address', 'destination_address');
 
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -262,8 +235,7 @@ class ReportRepository
             )
             ->groupBy('users.id', 'users.name', 'users.email', 'users.is_active');
 
-        if ($startDate) $query->where('trips.created_at', '>=', $startDate);
-        if ($endDate) $query->where('trips.created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate, 'trips.created_at');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -281,8 +253,7 @@ class ReportRepository
     public function getCancellationsOverTime(?string $startDate = null, ?string $endDate = null): array
     {
         $query = Trip::where('state_id', State::CANCELLED);
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select(
                 DB::raw('DATE(created_at) as date'),
@@ -297,8 +268,7 @@ class ReportRepository
     public function getWaitTimeOverTime(?string $startDate = null, ?string $endDate = null): array
     {
         $query = Trip::whereIn('state_id', [State::ACCEPTED, State::STARTED, State::FINISHED]);
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select(
                 DB::raw('DATE(created_at) as date'),
@@ -314,8 +284,7 @@ class ReportRepository
     {
         $query = Trip::whereNotNull('origin_lat')->whereNotNull('origin_lng');
 
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
+        $this->applyDateFilters($query, $startDate, $endDate);
 
         return $query->select('origin_lat as lat', 'origin_lng as lng')
             ->get()
@@ -340,16 +309,9 @@ class ReportRepository
             $completedTripsQuery = Trip::where('state_id', State::FINISHED);
             $activeTripsQuery = Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED]);
 
-            if ($startDate) {
-                $tripsQuery->where('created_at', '>=', $startDate);
-                $completedTripsQuery->where('created_at', '>=', $startDate);
-                $activeTripsQuery->where('created_at', '>=', $startDate);
-            }
-            if ($endDate) {
-                $tripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
-                $completedTripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
-                $activeTripsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
-            }
+            $this->applyDateFilters($tripsQuery, $startDate, $endDate);
+            $this->applyDateFilters($completedTripsQuery, $startDate, $endDate);
+            $this->applyDateFilters($activeTripsQuery, $startDate, $endDate);
 
             return [
                 'users' => User::withTrashed()->count(),
@@ -363,5 +325,20 @@ class ReportRepository
                 'completed' => $completedTripsQuery->count(),
                 'approved_disconnects' => Cache::get('driver.disconnect.approved_ids', [])
             ];
+    }
+
+    private function applyDateFilters($query, ?string $startDate, ?string $endDate, string $column = 'created_at', $defaultStartDate = null)
+    {
+        if ($startDate) {
+            $query->where($column, '>=', $startDate);
+        } elseif ($defaultStartDate) {
+            $query->where($column, '>=', $defaultStartDate);
+        }
+
+        if ($endDate) {
+            $query->where($column, '<=', \Carbon\Carbon::parse($endDate)->endOfDay());
+        }
+
+        return $query;
     }
 }

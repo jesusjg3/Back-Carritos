@@ -7,6 +7,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -23,7 +24,8 @@ class AuthController extends Controller
             $result = $this->authService->register($request->validated());
             return response()->json($result, 201);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            Log::error('Register error: ' . $e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error al registrar el usuario.'], 400);
         }
     }
 
@@ -46,7 +48,8 @@ class AuthController extends Controller
             $this->authService->logout();
             return response()->json(['message' => 'Cierre de sesión exitoso']);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Logout error: ' . $e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error al cerrar sesión.'], 500);
         }
     }
 
@@ -56,7 +59,8 @@ class AuthController extends Controller
             $user = $this->authService->me();
             return response()->json($user);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
+            Log::error('Me error: ' . $e->getMessage());
+            return response()->json(['error' => 'No autorizado.'], 401);
         }
     }
 
@@ -66,7 +70,8 @@ class AuthController extends Controller
             $result = $this->authService->refresh();
             return response()->json($result);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
+            Log::error('Refresh error: ' . $e->getMessage());
+            return response()->json(['error' => 'No se pudo refrescar el token.'], 401);
         }
     }
 

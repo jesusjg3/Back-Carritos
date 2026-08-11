@@ -18,7 +18,7 @@ class VehicleRepository
             });
         }
 
-        if ($status !== null && $status !== 'null' && $status !== '') {
+        if ($status) {
             if ($status === 'deleted') {
                 $query->whereNotNull('deleted_at');
             } elseif ($status === 'active') {
@@ -30,24 +30,23 @@ class VehicleRepository
 
         $baseCountQuery = Vehicle::withTrashed();
 
-        if ($search) {
-            $baseCountQuery->where(function ($q) use ($search) {
-                $q->where('plate', 'ilike', '%' . $search . '%')
-                  ->orWhere('model', 'ilike', '%' . $search . '%')
-                  ->orWhere('brand', 'ilike', '%' . $search . '%');
-            });
-        }
 
-        $totalInactive = (clone $baseCountQuery)->where('status', 'inactive')->whereNull('deleted_at')->count();
-        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN status = \'inactive\' AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN status = \'maintenance\' AND deleted_at IS NULL THEN 1 END) as total_mantenimiento,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
 
         $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
                            ->orderBy('id', 'desc')
                            ->paginate($perPage);
         $result = $paginator->toArray();
-        $result['total_registrados'] = (clone $baseCountQuery)->count();
-        $result['total_inactivos'] = $totalInactive;
-        $result['total_eliminados'] = $totalDeleted;
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_mantenimiento'] = (int) ($counts->total_mantenimiento ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
 
         return $result;
     }
@@ -71,14 +70,14 @@ class VehicleRepository
 
     public function update(int $id, array $data)
     {
-        $vehicle = $this->find($id);
+        $vehicle = Vehicle::withTrashed()->findOrFail($id);
         $vehicle->update($data);
         return $vehicle;
     }
 
     public function delete(int $id)
     {
-        $vehicle = $this->find($id);
+        $vehicle = Vehicle::withTrashed()->findOrFail($id);
         return $vehicle->delete();
     }
 }

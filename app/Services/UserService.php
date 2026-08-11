@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UserService
 {
@@ -43,25 +44,27 @@ class UserService
 
     public function createAdmin(array $data)
     {
-        $adminRole = $this->rolRepo->findByName('admin');
+        return DB::transaction(function () use ($data) {
+            $adminRole = $this->rolRepo->findByName('admin');
 
-        if (!$adminRole) {
-            throw new \Exception('El rol de administrador no existe.');
-        }
+            if (!$adminRole) {
+                throw new \Exception('El rol de administrador no existe.');
+            }
 
-        $user = $this->userRepo->create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'rol_id' => $adminRole->id,
-            'is_active' => true,
-        ]);
+            $user = $this->userRepo->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'rol_id' => $adminRole->id,
+                'is_active' => true,
+            ]);
 
-        if (isset($data['permissions']) && is_array($data['permissions'])) {
-            $user->permissions()->sync($data['permissions']);
-        }
+            if (isset($data['permissions']) && is_array($data['permissions'])) {
+                $user->permissions()->sync($data['permissions']);
+            }
 
-        return $this->userRepo->find($user->id);
+            return $this->userRepo->find($user->id);
+        });
     }
 
     public function toggleUserStatus(int $id, ?int $actingUserId = null)
@@ -77,28 +80,30 @@ class UserService
 
     public function updateUser(int $id, array $data)
     {
-        $allowedFields = ['name', 'email', 'rol_id', 'password'];
-        $updateData = array_intersect_key($data, array_flip($allowedFields));
+        return DB::transaction(function () use ($id, $data) {
+            $allowedFields = ['name', 'email', 'rol_id', 'password'];
+            $updateData = array_intersect_key($data, array_flip($allowedFields));
 
-        if (!empty($updateData['password'])) {
-            $updateData['password'] = Hash::make($updateData['password']);
-        }
+            if (!empty($updateData['password'])) {
+                $updateData['password'] = Hash::make($updateData['password']);
+            }
 
-        $updatedUser = $this->userRepo->update($id, $updateData);
+            $updatedUser = $this->userRepo->update($id, $updateData);
 
-        if (isset($data['permissions']) && is_array($data['permissions'])) {
-            $updatedUser->permissions()->sync($data['permissions']);
-        }
+            if (isset($data['permissions']) && is_array($data['permissions'])) {
+                $updatedUser->permissions()->sync($data['permissions']);
+            }
 
-        return [
-            'id' => $updatedUser->id,
-            'name' => $updatedUser->name,
-            'email' => $updatedUser->email,
-            'role' => $updatedUser->rol->rol_name ?? null,
-            'role_id' => $updatedUser->rol_id,
-            'is_active' => $updatedUser->is_active,
-            'permissions' => $updatedUser->permissions->pluck('name')->toArray()
-        ];
+            return [
+                'id' => $updatedUser->id,
+                'name' => $updatedUser->name,
+                'email' => $updatedUser->email,
+                'role' => $updatedUser->rol->rol_name ?? null,
+                'role_id' => $updatedUser->rol_id,
+                'is_active' => $updatedUser->is_active,
+                'permissions' => $updatedUser->permissions->pluck('name')->toArray()
+            ];
+        });
     }
 
     public function deleteUser(int $id, ?int $actingUserId = null)

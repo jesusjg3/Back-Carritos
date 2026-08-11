@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UserDevice;
+use App\Services\DeviceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class DeviceController extends Controller
 {
+    protected DeviceService $deviceService;
+
+    public function __construct(DeviceService $deviceService)
+    {
+        $this->deviceService = $deviceService;
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -15,21 +22,10 @@ class DeviceController extends Controller
             'device_name' => 'nullable|string',
         ]);
 
-        $user = Auth::user();
-
-        UserDevice::where('expo_token', $request->expo_token)
-            ->where('user_id', '!=', $user->id)
-            ->delete();
-
-        $device = UserDevice::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'expo_token' => $request->expo_token,
-            ],
-            [
-                'device_name' => $request->device_name,
-                'is_active' => true,
-            ]
+        $device = $this->deviceService->registerExpoToken(
+            Auth::id(),
+            $request->expo_token,
+            $request->device_name
         );
 
         return response()->json([

@@ -10,6 +10,7 @@ use App\Repositories\TripRatingRepository;
 use App\Repositories\TripRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class TripRatingService
 {
@@ -67,43 +68,46 @@ class TripRatingService
             throw new \Exception('Puntaje inválido');
         }
 
-        $rating = $this->tripRatingRepo->create([
-            'trip_id' => $trip->id,
-            'emitter_id' => $fromUser->id,
-            'receiver_id' => $toUser->id,
-            'rating' => $score,
-            'comment' => $comment,
-        ]);
+        return DB::transaction(function () use ($trip, $fromUser, $toUser, $score, $comment) {
+            $rating = $this->tripRatingRepo->create([
+                'trip_id' => $trip->id,
+                'emitter_id' => $fromUser->id,
+                'receiver_id' => $toUser->id,
+                'rating' => $score,
+                'comment' => $comment,
+            ]);
 
-        $ratingProfile = $this->userRepo->getRatingProfile($toUser->id);
-        $currentScore = (float) $ratingProfile->score;
-        $currentCount = (int) $ratingProfile->rating_count;
+            $ratingProfile = $this->userRepo->getRatingProfileForUpdate($toUser->id);
 
-        if ($currentCount === 0) {
-            $newScore = (float) $score;
-        } else {
-            $newScore = (($currentScore * $currentCount) + $score) / ($currentCount + 1);
-        }
+            $currentScore = (float) $ratingProfile->score;
+            $currentCount = (int) $ratingProfile->rating_count;
 
-        $this->userRepo->updateRatingProfile(
-            $toUser->id, 
-            round($newScore, 2), 
-            $currentCount + 1
-        );
+            if ($currentCount === 0) {
+                $newScore = (float) $score;
+            } else {
+                $newScore = (($currentScore * $currentCount) + $score) / ($currentCount + 1);
+            }
 
-        return [
-            'id' => $rating->id,
-            'trip_id' => $rating->trip_id,
-            'rating' => $rating->rating,
-            'comment' => $rating->comment,
-            'emitter' => [
-                'name' => $fromUser->name,
-            ],
-            'receiver' => [
-                'name' => $toUser->name,
-            ],
-            'created_at' => $rating->created_at,
-        ];
+            $this->userRepo->updateRatingProfile(
+                $toUser->id, 
+                round($newScore, 2), 
+                $currentCount + 1
+            );
+
+            return [
+                'id' => $rating->id,
+                'trip_id' => $rating->trip_id,
+                'rating' => $rating->rating,
+                'comment' => $rating->comment,
+                'emitter' => [
+                    'name' => $fromUser->name,
+                ],
+                'receiver' => [
+                    'name' => $toUser->name,
+                ],
+                'created_at' => $rating->created_at,
+            ];
+        });
     }
 
     public function getRatingsReceived(User $user): array

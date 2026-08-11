@@ -13,9 +13,9 @@ class ComplaintService
         $this->complaintRepo = $complaintRepo;
     }
 
-    public function getAllComplaints($perPage = 10, $status = null)
+    public function getAllComplaints($search = null, $perPage = 10, $status = null)
     {
-        return $this->complaintRepo->all($perPage, $status);
+        return $this->complaintRepo->all($search, $perPage, $status);
     }
 
     public function getComplaintById(int $id)

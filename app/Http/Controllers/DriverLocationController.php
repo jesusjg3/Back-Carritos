@@ -20,10 +20,6 @@ class DriverLocationController extends Controller
     {
         $user = $request->user();
 
-        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
-            return response()->json(['error' => 'Solo los conductores pueden actualizar su ubicación'], 403);
-        }
-
         $data = $request->validated();
 
         $payload = $this->locationService->updateLocationAndBroadcast(
@@ -46,10 +42,6 @@ class DriverLocationController extends Controller
     {
         $user = $request->user();
 
-        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
-            return response()->json(['error' => 'Solo los conductores pueden cambiar su estado'], 403);
-        }
-
         $this->locationService->setDriverOffline($user->id);
 
         return response()->json(['message' => 'Conductor marcado como offline']);
@@ -58,10 +50,6 @@ class DriverLocationController extends Controller
     public function requestDisconnect(Request $request): JsonResponse
     {
         $user = $request->user();
-
-        if (!$user || !$user->rol || $user->rol->rol_name !== 'conductor') {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
 
         $data = $request->validate([
             'reason' => 'required|string|max:255',
@@ -74,10 +62,6 @@ class DriverLocationController extends Controller
 
     public function approveDisconnect(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || $user->rol_id !== 1) {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
 
         $this->disconnectService->approveDisconnect($id);
 
@@ -86,10 +70,6 @@ class DriverLocationController extends Controller
 
     public function rejectDisconnect(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || $user->rol_id !== 1) {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
 
         $this->disconnectService->rejectDisconnect($id);
 
@@ -120,15 +100,12 @@ class DriverLocationController extends Controller
 
     public function getAllDisconnectRequests(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || $user->rol_id !== 1) {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
 
         $perPage = (int) $request->input('per_page', 10);
         $status = $request->input('status');
+        $search = $request->input('search');
 
-        $requests = $this->disconnectService->getPaginatedRequests($perPage, $status);
+        $requests = $this->disconnectService->getPaginatedRequests($perPage, $status, $search);
         $stats = $this->disconnectService->getGlobalStats();
 
         // Convert the paginator to an array and merge stats

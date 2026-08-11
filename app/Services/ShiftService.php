@@ -37,7 +37,7 @@ class ShiftService
     {
         $shift = $this->shiftRepo->find($id);
         if ($shift->assignments()->exists()) {
-            throw new \Exception('No se puede eliminar el horario porque tiene asignaciones.');
+            abort(422, 'No se puede eliminar el horario porque tiene asignaciones.');
         }
         return $this->shiftRepo->delete($id);
     }

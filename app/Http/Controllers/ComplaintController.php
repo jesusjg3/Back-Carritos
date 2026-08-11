@@ -20,15 +20,17 @@ class ComplaintController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $search = $request->query('search');
         $perPage = $request->query('per_page', 10);
         $status = $request->query('status');
-        $complaints = $this->complaintService->getAllComplaints($perPage, $status);
+        $complaints = $this->complaintService->getAllComplaints($search, $perPage, $status);
         return response()->json($complaints, 200);
     }
 
     public function store(StoreComplaintRequest $request): JsonResponse
     {
-        $userId = Auth::id() ?? 1;
+        $userId = Auth::id();
+        if (!$userId) abort(401, 'No autenticado');
         $complaint = $this->complaintService->createComplaint($request->validated(), $userId);
         return response()->json($complaint, 201);
     }

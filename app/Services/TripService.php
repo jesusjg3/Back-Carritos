@@ -13,6 +13,7 @@ use App\Events\TripAccepted;
 use App\Events\TripStarted;
 use App\Events\TripFinished;
 use App\Events\TripCancelled;
+use App\Jobs\SendPushNotificationJob;
 use Exception;
 
 class TripService
@@ -74,6 +75,7 @@ class TripService
         $stats = $this->tripRepo->getStats($search);
 
         $result = $paginator->toArray();
+        $result['total_registrados'] = $stats['total_registrados'];
         $result['total_terminados'] = $stats['total_terminados'];
         $result['total_cancelados'] = $stats['total_cancelados'];
 
@@ -151,7 +153,7 @@ class TripService
 
             // Notify passengers
             foreach ($trip->passengers as $p) {
-                $this->pushService->sendToUser(
+                SendPushNotificationJob::dispatch(
                     $p->id,
                     "Viaje Aceptado",
                     "El conductor {$driver->name} ha aceptado tu viaje."
@@ -194,7 +196,7 @@ class TripService
 
             // Notify passengers
             foreach ($trip->passengers as $p) {
-                $this->pushService->sendToUser(
+                SendPushNotificationJob::dispatch(
                     $p->id,
                     "Viaje Iniciado",
                     "El conductor ha iniciado la ruta hacia el destino."
@@ -262,7 +264,7 @@ class TripService
             }
 
             // Notificar al pasajero
-            $this->pushService->sendToUser(
+            SendPushNotificationJob::dispatch(
                 $passengerId,
                 "Viaje Cancelado",
                 "El conductor ha cancelado tu asignación en este viaje."
@@ -292,7 +294,7 @@ class TripService
             broadcast(new TripFinished($trip));
 
             foreach ($trip->passengers as $p) {
-                $this->pushService->sendToUser(
+                SendPushNotificationJob::dispatch(
                     $p->id,
                     "Viaje Finalizado",
                     "Has llegado a tu destino. ¡Gracias por usar Carritos!"
@@ -345,14 +347,14 @@ class TripService
             broadcast(new TripCancelled($trip));
 
             if ($roleName === 'pasajero' && $trip->driver_id) {
-                $this->pushService->sendToUser(
+                SendPushNotificationJob::dispatch(
                     $trip->driver_id,
                     "Viaje Cancelado",
                     "Un pasajero ha cancelado su solicitud."
                 );
             } else if ($roleName === 'conductor') {
                 foreach ($trip->passengers as $p) {
-                    $this->pushService->sendToUser(
+                    SendPushNotificationJob::dispatch(
                         $p->id,
                         "Viaje Cancelado",
                         "El conductor ha cancelado el viaje."

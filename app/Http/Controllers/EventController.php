@@ -19,8 +19,10 @@ class EventController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $search = $request->input('search');
+        $status = $request->input('status');
         $itemsPerPage = $request->query('per_page', 15);
-        $events = $this->eventService->getAllEvents($itemsPerPage);
+        $events = $this->eventService->getAllEvents($search, $itemsPerPage, $status);
         return response()->json($events, 200);
     }
 

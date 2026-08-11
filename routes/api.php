@@ -126,12 +126,17 @@ Route::middleware('auth:api')->group(function () {
 
         Route::get('/trips/history', [TripController::class, 'history']); // Historial personal (Pasajeros/Conductores)
 
-        Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
-        Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
-        Route::post('/driver/request-disconnect', [DriverLocationController::class, 'requestDisconnect']);
-        Route::get('/admin/disconnect-requests', [DriverLocationController::class, 'getAllDisconnectRequests']);
-        Route::post('/admin/driver/{id}/approve-disconnect', [DriverLocationController::class, 'approveDisconnect']);
-        Route::post('/admin/driver/{id}/reject-disconnect', [DriverLocationController::class, 'rejectDisconnect']);
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/admin/disconnect-requests', [DriverLocationController::class, 'getAllDisconnectRequests']);
+            Route::post('/admin/driver/{id}/approve-disconnect', [DriverLocationController::class, 'approveDisconnect']);
+            Route::post('/admin/driver/{id}/reject-disconnect', [DriverLocationController::class, 'rejectDisconnect']);
+        });
+
+        Route::middleware('role:conductor')->group(function () {
+            Route::post('/driver/location', [DriverLocationController::class, 'updateDriverLocation']);
+            Route::post('/driver/offline', [DriverLocationController::class, 'setDriverOffline']);
+            Route::post('/driver/request-disconnect', [DriverLocationController::class, 'requestDisconnect']);
+        });
         Route::get('/drivers/nearby', [DriverLocationController::class, 'getNearbyDrivers']);
         Route::get('/users/drivers', [DriverLocationController::class, 'getOnlineDrivers']);
     });

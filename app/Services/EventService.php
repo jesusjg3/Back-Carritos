@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\EventRepository;
+use Illuminate\Support\Facades\DB;
 
 class EventService
 {
@@ -13,9 +14,9 @@ class EventService
         $this->eventRepo = $eventRepo;
     }
 
-    public function getAllEvents($itemsPerPage = 15)
+    public function getAllEvents($search = null, $itemsPerPage = 15, $status = null)
     {
-        return $this->eventRepo->all($itemsPerPage);
+        return $this->eventRepo->all($search, $itemsPerPage, $status);
     }
 
     public function getEventById(int $id)
@@ -25,26 +26,30 @@ class EventService
 
     public function createEvent(array $data)
     {
-        $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date'])->toArray();
-        $event = $this->eventRepo->create($eventData);
+        return DB::transaction(function () use ($data) {
+            $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date', 'is_active'])->toArray();
+            $event = $this->eventRepo->create($eventData);
 
-        if (isset($data['assignment_ids'])) {
-            $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
-        }
+            if (isset($data['assignment_ids'])) {
+                $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
+            }
 
-        return $this->eventRepo->find($event->id);
+            return $this->eventRepo->find($event->id);
+        });
     }
 
     public function updateEvent(int $id, array $data)
     {
-        $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date'])->toArray();
-        $event = $this->eventRepo->update($id, $eventData);
+        return DB::transaction(function () use ($id, $data) {
+            $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date', 'is_active'])->toArray();
+            $event = $this->eventRepo->update($id, $eventData);
 
-        if (isset($data['assignment_ids'])) {
-            $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
-        }
+            if (isset($data['assignment_ids'])) {
+                $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
+            }
 
-        return $this->eventRepo->find($event->id);
+            return $this->eventRepo->find($event->id);
+        });
     }
 
     public function deleteEvent(int $id)

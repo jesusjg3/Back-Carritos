@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Exception;
 
 class ReportController extends Controller
 {
@@ -19,50 +17,35 @@ class ReportController extends Controller
 
     public function driversSummary(Request $request): JsonResponse
     {
-        try {
-            $search = $request->query('search');
-            $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getDriversSummary($search, $perPage, $startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in driversSummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de conductores.'], 500);
-        }
+        $search = $request->query('search');
+        $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getDriversSummary($search, $perPage, $startDate, $endDate);
+        return response()->json($summary);
     }
 
     public function passengersSummary(Request $request): JsonResponse
     {
-        try {
-            $search = $request->query('search');
-            $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getPassengersSummary($search, $perPage, $startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in passengersSummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de pasajeros.'], 500);
-        }
+        $search = $request->query('search');
+        $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getPassengersSummary($search, $perPage, $startDate, $endDate);
+        return response()->json($summary);
     }
 
     public function routesDetailsSummary(Request $request): JsonResponse
     {
-        try {
-            $search = $request->query('search');
-            $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getRoutesDetailsSummary($search, $perPage, $startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in routesDetailsSummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el detalle de rutas.'], 500);
-        }
+        $search = $request->query('search');
+        $perPage = $request->has('per_page') ? $request->integer('per_page') : null;
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getRoutesDetailsSummary($search, $perPage, $startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -70,15 +53,10 @@ class ReportController extends Controller
      */
     public function destinationsSummary(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getDestinationsSummary($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in destinationsSummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de destinos.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getDestinationsSummary($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -86,15 +64,10 @@ class ReportController extends Controller
      */
     public function hourlySummary(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getHourlySummary($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in hourlySummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte por horas.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getHourlySummary($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -102,15 +75,10 @@ class ReportController extends Controller
      */
     public function dailySummary(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getDailySummary($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in dailySummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte diario.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getDailySummary($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -118,15 +86,10 @@ class ReportController extends Controller
      */
     public function ratingsDistribution(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getRatingsDistribution($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in ratingsDistribution: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de calificaciones.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getRatingsDistribution($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -134,15 +97,10 @@ class ReportController extends Controller
      */
     public function routesPerformance(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getRoutesPerformance($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in routesPerformance: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al generar el reporte de rutas.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getRoutesPerformance($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -150,15 +108,10 @@ class ReportController extends Controller
      */
     public function allSummary(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getAllSummary($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in allSummary: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al recopilar todos los reportes.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getAllSummary($startDate, $endDate);
+        return response()->json($summary);
     }
 
     /**
@@ -166,28 +119,18 @@ class ReportController extends Controller
      */
     public function dashboardStats(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $summary = $this->reportService->getDashboardStats($startDate, $endDate);
-            return response()->json($summary);
-        } catch (Exception $exception) {
-            Log::error('Error in dashboardStats: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al obtener estadísticas del dashboard.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $summary = $this->reportService->getDashboardStats($startDate, $endDate);
+        return response()->json($summary);
     }
 
     public function tripsCoordinates(Request $request): JsonResponse
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            $coordinates = $this->reportService->getTripsCoordinates($startDate, $endDate);
-            return response()->json($coordinates);
-        } catch (Exception $exception) {
-            Log::error('Error in tripsCoordinates: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al obtener las coordenadas.'], 500);
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $coordinates = $this->reportService->getTripsCoordinates($startDate, $endDate);
+        return response()->json($coordinates);
     }
 
     private function streamCsv(string $filename, array $columns, array $data)
@@ -202,7 +145,6 @@ class ReportController extends Controller
 
         $callback = function() use ($data, $columns) {
             $file = fopen('php://output', 'w');
-            // Agregamos BOM para que Excel reconozca correctamente UTF-8
             fputs($file, "\xEF\xBB\xBF");
             fputcsv($file, $columns);
             foreach ($data as $row) {
@@ -216,98 +158,83 @@ class ReportController extends Controller
 
     public function exportDriversReport(Request $request)
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getDriversSummary(null, null, $startDate, $endDate);
-            
-            $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Completados', 'Viajes Cancelados', 'Total Pasajeros', 'Promedio Pasajeros', 'Duración Promedio (min)', 'Estado'];
-            $data = [];
-            
-            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getDriversSummary(null, null, $startDate, $endDate);
+        
+        $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Completados', 'Viajes Cancelados', 'Total Pasajeros', 'Promedio Pasajeros', 'Duración Promedio (min)', 'Estado'];
+        $data = [];
+        
+        $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
 
-            foreach ($items as $item) {
-                $data[] = [
-                    $item['id'] ?? '',
-                    $item['name'] ?? '',
-                    $item['email'] ?? '',
-                    ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
-                    $item['completed_trips'] ?? 0,
-                    $item['canceled_trips'] ?? 0,
-                    $item['total_passengers'] ?? 0,
-                    $item['avg_passengers'] ?? 0,
-                    $item['avg_duration_minutes'] ?? 0,
-                    (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
-                ];
-            }
-            
-            return $this->streamCsv('reporte_conductores.csv', $columns, $data);
-        } catch (Exception $exception) {
-            Log::error('Error in exportDriversReport: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        foreach ($items as $item) {
+            $data[] = [
+                $item['id'] ?? '',
+                $item['name'] ?? '',
+                $item['email'] ?? '',
+                ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
+                $item['completed_trips'] ?? 0,
+                $item['canceled_trips'] ?? 0,
+                $item['total_passengers'] ?? 0,
+                $item['avg_passengers'] ?? 0,
+                $item['avg_duration_minutes'] ?? 0,
+                (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
+            ];
         }
+        
+        return $this->streamCsv('reporte_conductores.csv', $columns, $data);
     }
 
     public function exportPassengersReport(Request $request)
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getPassengersSummary(null, null, $startDate, $endDate);
-            
-            $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Tomados', 'Viajes Cancelados', 'Estado'];
-            $data = [];
-            
-            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getPassengersSummary(null, null, $startDate, $endDate);
+        
+        $columns = ['ID', 'Nombre', 'Correo', 'Calificación', 'Viajes Tomados', 'Viajes Cancelados', 'Estado'];
+        $data = [];
+        
+        $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
 
-            foreach ($items as $item) {
-                $data[] = [
-                    $item['id'] ?? '',
-                    $item['name'] ?? '',
-                    $item['email'] ?? '',
-                    ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
-                    $item['completed_trips'] ?? 0,
-                    $item['canceled_trips'] ?? 0,
-                    (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
-                ];
-            }
-            
-            return $this->streamCsv('reporte_pasajeros.csv', $columns, $data);
-        } catch (Exception $exception) {
-            Log::error('Error in exportPassengersReport: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        foreach ($items as $item) {
+            $data[] = [
+                $item['id'] ?? '',
+                $item['name'] ?? '',
+                $item['email'] ?? '',
+                ($item['score'] ?? '0') . ' (' . ($item['rating_count'] ?? '0') . ')',
+                $item['completed_trips'] ?? 0,
+                $item['canceled_trips'] ?? 0,
+                (isset($item['is_active']) && $item['is_active']) ? 'Activo' : 'Inactivo',
+            ];
         }
+        
+        return $this->streamCsv('reporte_pasajeros.csv', $columns, $data);
     }
 
     public function exportRoutesReport(Request $request)
     {
-        try {
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
-            
-            $summary = $this->reportService->getRoutesDetailsSummary(null, null, $startDate, $endDate);
-            
-            $columns = ['Origen', 'Destino', 'Viajes Completados', 'Viajes Cancelados', 'Duración Promedio (min)'];
-            $data = [];
-            
-            $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        $summary = $this->reportService->getRoutesDetailsSummary(null, null, $startDate, $endDate);
+        
+        $columns = ['Origen', 'Destino', 'Viajes Completados', 'Viajes Cancelados', 'Duración Promedio (min)'];
+        $data = [];
+        
+        $items = is_array($summary) ? $summary : (isset($summary['data']) ? $summary['data'] : []);
 
-            foreach ($items as $item) {
-                $data[] = [
-                    $item['origin_address'] ?? 'Desconocido',
-                    $item['destination_address'] ?? 'Desconocido',
-                    $item['completed_trips'] ?? 0,
-                    $item['canceled_trips'] ?? 0,
-                    $item['avg_duration_minutes'] ?? 0,
-                ];
-            }
-            
-            return $this->streamCsv('reporte_rutas.csv', $columns, $data);
-        } catch (Exception $exception) {
-            Log::error('Error in exportRoutesReport: ' . $exception->getMessage());
-            return response()->json(['error' => 'Ocurrió un error interno al exportar el reporte.'], 500);
+        foreach ($items as $item) {
+            $data[] = [
+                $item['origin_address'] ?? 'Desconocido',
+                $item['destination_address'] ?? 'Desconocido',
+                $item['completed_trips'] ?? 0,
+                $item['canceled_trips'] ?? 0,
+                $item['avg_duration_minutes'] ?? 0,
+            ];
         }
+        
+        return $this->streamCsv('reporte_rutas.csv', $columns, $data);
     }
 }

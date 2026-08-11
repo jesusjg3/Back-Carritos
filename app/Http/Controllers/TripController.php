@@ -23,15 +23,11 @@ class TripController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        if ($user && $user->rol_id === 1) {
-            $perPage = $request->integer('per_page', 10);
-            $search = $request->query('search');
-            $stateName = $request->query('state_name');
-            $trips = $this->tripService->getAllAdminTrips($perPage, $search, $stateName);
-            return response()->json($trips);
-        }
-        return response()->json(['error' => 'No autorizado'], 403);
+        $perPage = $request->integer('per_page', 10);
+        $search = $request->query('search');
+        $stateName = $request->query('state_name');
+        $trips = $this->tripService->getAllAdminTrips($perPage, $search, $stateName);
+        return response()->json($trips);
     }
 
     /**

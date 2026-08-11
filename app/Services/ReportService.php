@@ -15,6 +15,11 @@ class ReportService
         $this->reportRepo = $reportRepo;
     }
 
+    private function getCacheKey(string $prefix, ?string $startDate = null, ?string $endDate = null): string
+    {
+        return $prefix . '_' . md5(($startDate ?? '') . '_' . ($endDate ?? ''));
+    }
+
     public function getDriversSummary(?string $search = null, ?int $perPage = null, ?string $startDate = null, ?string $endDate = null)
     {
         return $this->reportRepo->getDriversSummary($search, $perPage, $startDate, $endDate);
@@ -84,7 +89,7 @@ class ReportService
      */
     public function getAllSummary(?string $startDate = null, ?string $endDate = null): array
     {
-        $cacheKey = 'reports_all_summary_' . md5($startDate . '_' . $endDate);
+        $cacheKey = $this->getCacheKey('reports_all_summary', $startDate, $endDate);
         return Cache::remember($cacheKey, 120, function () use ($startDate, $endDate) {
             $totalCompleted = $this->reportRepo->getCompletedTripsCount($startDate, $endDate);
             $safeTotalCompleted = max($totalCompleted, 1);
@@ -119,7 +124,7 @@ class ReportService
 
     public function getTripsCoordinates(?string $startDate = null, ?string $endDate = null): array
     {
-        $cacheKey = 'trips_coordinates_' . md5($startDate . '_' . $endDate);
+        $cacheKey = $this->getCacheKey('trips_coordinates', $startDate, $endDate);
         return Cache::remember($cacheKey, 300, function () use ($startDate, $endDate) {
             return $this->reportRepo->getTripsCoordinates($startDate, $endDate);
         });
@@ -130,7 +135,7 @@ class ReportService
      */
     public function getDashboardStats(?string $startDate = null, ?string $endDate = null): array
     {
-        $cacheKey = 'dashboard_stats_' . md5($startDate . '_' . $endDate);
+        $cacheKey = $this->getCacheKey('dashboard_stats', $startDate, $endDate);
         return Cache::remember($cacheKey, 15, function () use ($startDate, $endDate) {
             $stats = $this->reportRepo->getDashboardStats($startDate, $endDate);
             $cancellations = $this->reportRepo->getCancellationsOverTime($startDate, $endDate);
@@ -147,7 +152,7 @@ class ReportService
      */
     public function broadcastDashboardUpdates()
     {
-        $cacheKey = 'dashboard_stats_' . md5('_');
+        $cacheKey = $this->getCacheKey('dashboard_stats', null, null);
         Cache::forget($cacheKey);
         
         $stats = $this->getDashboardStats();

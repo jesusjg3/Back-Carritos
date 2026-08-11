@@ -26,9 +26,7 @@ class TripPositionService
     {
         $trip = $this->tripRepo->find($tripId);
 
-        if (!$trip) {
-            throw new ModelNotFoundException("Carrera no encontrada");
-        }
+
 
         if ($trip->driver_id !== $user->id) {
             throw new \Exception('No autorizado para enviar posición de esta carrera.', 403);

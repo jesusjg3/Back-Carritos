@@ -39,31 +39,28 @@ class DestinationRepository
         }
 
         $baseCountQuery = Destination::withTrashed();
-        if ($search) {
-            $baseCountQuery->where(function ($subQuery) use ($search) {
-                $subQuery->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('description', 'ilike', "%{$search}%")
-                    ->orWhere('address', 'ilike', "%{$search}%");
-            });
-        }
 
-        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
-        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN is_active = false AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
 
         $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
                            ->orderBy('id', 'desc')
                            ->paginate($perPage);
 
         $result = $paginator->toArray();
-        $result['total_inactivos'] = $totalInactive;
-        $result['total_eliminados'] = $totalDeleted;
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
 
         return $result;
     }
 
     public function find(int $id)
     {
-        return Destination::findOrFail($id);
+        return Destination::withTrashed()->findOrFail($id);
     }
 
     public function create(array $data)
@@ -73,7 +70,7 @@ class DestinationRepository
 
     public function update(int $id, array $data)
     {
-        $destination = Destination::findOrFail($id);
+        $destination = Destination::withTrashed()->findOrFail($id);
         $destination->update($data);
 
         return $destination;
@@ -87,7 +84,7 @@ class DestinationRepository
 
     public function toggleStatus(int $id)
     {
-        $destination = Destination::findOrFail($id);
+        $destination = Destination::withTrashed()->findOrFail($id);
         $destination->is_active = !$destination->is_active;
         $destination->save();
 

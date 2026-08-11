@@ -11,7 +11,7 @@ class AssignmentRepository
     {
         return Assignment::where('user_id', $userId)
             ->with(['vehicle', 'shift', 'events' => function ($query) {
-                $now = \Carbon\Carbon::now('America/Guayaquil');
+                $now = now();
                 $query->where('start_date', '<=', $now)
                       ->where('end_date', '>=', $now);
             }])
@@ -43,22 +43,20 @@ class AssignmentRepository
         }
 
         $baseCountQuery = Assignment::withTrashed();
-        if ($search) {
-            $baseCountQuery->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'ilike', '%' . $search . '%');
-            });
-        }
 
-        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
-        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN is_active = false AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
 
         $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
                            ->orderBy('id', 'desc')
                            ->paginate($perPage);
         $result = $paginator->toArray();
-        $result['total_registrados'] = (clone $baseCountQuery)->count();
-        $result['total_inactivos'] = $totalInactive;
-        $result['total_eliminados'] = $totalDeleted;
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
 
         return $result;
     }
@@ -79,20 +77,20 @@ class AssignmentRepository
 
     public function update(int $id, array $data): Assignment
     {
-        $assignment = $this->find($id);
+        $assignment = Assignment::withTrashed()->findOrFail($id);
         $assignment->update($data);
         return $assignment;
     }
 
     public function delete(int $id): bool
     {
-        $assignment = $this->find($id);
+        $assignment = Assignment::withTrashed()->findOrFail($id);
         return $assignment->delete();
     }
 
     public function toggleStatus(int $id): Assignment
     {
-        $assignment = $this->find($id);
+        $assignment = Assignment::withTrashed()->findOrFail($id);
         $assignment->is_active = !$assignment->is_active;
         $assignment->save();
         return $assignment;

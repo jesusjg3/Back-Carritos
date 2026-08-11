@@ -25,20 +25,22 @@ class ShiftRepository
         }
 
         $baseCountQuery = Shift::withTrashed();
-        if ($search) {
-            $baseCountQuery->where('name', 'ilike', '%' . $search . '%');
-        }
 
-        $totalInactive = (clone $baseCountQuery)->where('is_active', false)->whereNull('deleted_at')->count();
-        $totalDeleted = (clone $baseCountQuery)->whereNotNull('deleted_at')->count();
+
+
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN is_active = false AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
 
         $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
                            ->orderBy('id', 'desc')
                            ->paginate($perPage);
         $result = $paginator->toArray();
-        $result['total_registrados'] = (clone $baseCountQuery)->count();
-        $result['total_inactivos'] = $totalInactive;
-        $result['total_eliminados'] = $totalDeleted;
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
 
         return $result;
     }
@@ -55,21 +57,21 @@ class ShiftRepository
 
     public function update($id, array $data)
     {
-        $shift = $this->find($id);
+        $shift = Shift::withTrashed()->findOrFail($id);
         $shift->update($data);
         return $shift;
     }
 
     public function delete($id)
     {
-        $shift = $this->find($id);
+        $shift = Shift::withTrashed()->findOrFail($id);
         $shift->delete();
         return true;
     }
 
     public function toggleStatus($id)
     {
-        $shift = $this->find($id);
+        $shift = Shift::withTrashed()->findOrFail($id);
         $shift->is_active = !$shift->is_active;
         $shift->save();
         return $shift;

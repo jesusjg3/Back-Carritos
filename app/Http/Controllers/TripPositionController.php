@@ -34,7 +34,8 @@ class TripPositionController extends Controller
         } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Carrera no encontrada'], 404);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            $status = $e->getCode() === 403 ? 403 : 400;
+            return response()->json(['error' => $e->getMessage()], $status);
         }
     }
 

@@ -42,7 +42,7 @@ class DisconnectService
         // o sin una tabla de lista negra, por lo que simplemente lo marcamos offline.
 
         $this->disconnectRequestRepository->updateStatus($driverId, 'approved');
-        
+
         // Remove from active drivers / location
         $this->locationService->setDriverOffline($driverId);
 
@@ -83,9 +83,9 @@ class DisconnectService
     /**
      * Get paginated disconnect requests.
      */
-    public function getPaginatedRequests(int $perPage = 10, ?string $status = null)
+    public function getPaginatedRequests(int $perPage = 10, ?string $status = null, ?string $search = null)
     {
-        return $this->disconnectRequestRepository->getPaginatedRequests($perPage, $status);
+        return $this->disconnectRequestRepository->getPaginatedRequests($perPage, $status, $search);
     }
 
     /**
