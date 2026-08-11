@@ -18,8 +18,8 @@ class UpdateEventRequest extends FormRequest
             'description' => 'nullable|string',
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after_or_equal:start_date',
-            'vehicle_ids' => 'nullable|array',
-            'vehicle_ids.*' => 'exists:vehicles,id',
+            'assignment_ids' => 'nullable|array',
+            'assignment_ids.*' => 'exists:assignments,id',
         ];
     }
 }

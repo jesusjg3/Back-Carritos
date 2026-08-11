@@ -14,6 +14,10 @@ Broadcast::channel('passenger.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('driver.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
 Broadcast::channel('trip.{tripId}', function ($user, $tripId) {
     $trip = Trip::find($tripId);
     if (!$trip) return false;

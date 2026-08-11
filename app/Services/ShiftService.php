@@ -36,8 +36,8 @@ class ShiftService
     public function deleteShift(int $id)
     {
         $shift = $this->shiftRepo->find($id);
-        if ($shift->driverProfiles()->exists()) {
-            throw new \Exception('No se puede eliminar el horario porque está asignado a un conductor.');
+        if ($shift->assignments()->exists()) {
+            throw new \Exception('No se puede eliminar el horario porque tiene asignaciones.');
         }
         return $this->shiftRepo->delete($id);
     }

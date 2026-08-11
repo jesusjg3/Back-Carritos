@@ -17,8 +17,8 @@ class Shift extends Model
         'is_active',
     ];
 
-    public function driverProfiles()
+    public function assignments()
     {
-        return $this->hasMany(DriverProfile::class);
+        return $this->hasMany(Assignment::class);
     }
 }

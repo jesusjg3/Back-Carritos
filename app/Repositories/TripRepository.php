@@ -6,6 +6,7 @@ use App\Models\Trip;
 use App\Models\TripPassenger;
 use App\Models\DriverLocation;
 use App\Models\State;
+use Illuminate\Support\Facades\DB;
 
 class TripRepository
 {
@@ -154,9 +155,13 @@ class TripRepository
 
     public function updatePassengerStatus(int $tripId, int $passengerId, string $status)
     {
-        return TripPassenger::where('trip_id', $tripId)
+        return DB::table('trip_passenger')
+            ->where('trip_id', $tripId)
             ->where('passenger_id', $passengerId)
-            ->update(['status' => $status]);
+            ->update([
+                'status' => $status,
+                'updated_at' => now()
+            ]);
     }
 
     public function updateAllPassengersStatus(int $tripId, string $oldStatus, string $newStatus)

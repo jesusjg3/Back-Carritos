@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\DriverProfileService;
+use App\Services\AssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class DriverProfileController extends Controller
+class AssignmentController extends Controller
 {
-    protected DriverProfileService $driverProfileService;
+    protected AssignmentService $assignmentService;
 
-    public function __construct(DriverProfileService $driverProfileService)
+    public function __construct(AssignmentService $assignmentService)
     {
-        $this->driverProfileService = $driverProfileService;
+        $this->assignmentService = $assignmentService;
     }
 
     public function index(Request $request): JsonResponse
@@ -22,26 +22,26 @@ class DriverProfileController extends Controller
         $perPage = $request->query('per_page', 10);
         $status = $request->query('status');
         
-        $profiles = $this->driverProfileService->getAllProfiles($search, $perPage, $status);
-        return response()->json($profiles, 200);
+        $assignments = $this->assignmentService->getAllAssignments($search, $perPage, $status);
+        return response()->json($assignments, 200);
     }
 
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'user_id' => ['required', 'exists:users,id', Rule::unique('driver_profiles', 'user_id')->whereNull('deleted_at')],
+            'user_id' => ['required', 'exists:users,id', Rule::unique('assignments', 'user_id')->whereNull('deleted_at')],
             'shift_id' => 'required|exists:shifts,id',
             'vehicle_id' => 'required|exists:vehicles,id',
         ]);
 
-        $profile = $this->driverProfileService->createProfile($data);
-        return response()->json($profile, 201);
+        $assignment = $this->assignmentService->createAssignment($data);
+        return response()->json($assignment, 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $profile = $this->driverProfileService->getProfileById($id);
-        return response()->json($profile, 200);
+        $assignment = $this->assignmentService->getAssignmentById($id);
+        return response()->json($assignment, 200);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -55,22 +55,19 @@ class DriverProfileController extends Controller
             'vehicle_id.exists' => 'El vehículo seleccionado no existe.'
         ]);
 
-        $profile = $this->driverProfileService->updateProfile($id, $data);
-        return response()->json($profile, 200);
+        $assignment = $this->assignmentService->updateAssignment($id, $data);
+        return response()->json($assignment, 200);
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $this->driverProfileService->deleteProfile($id);
+        $this->assignmentService->deleteAssignment($id);
         return response()->json(null, 204);
     }
 
     public function toggleStatus(int $id): JsonResponse
     {
-        $profile = $this->driverProfileService->toggleStatus($id);
-        return response()->json([
-            'message' => 'Estado de la asignación actualizado',
-            'is_active' => $profile->is_active
-        ]);
+        $assignment = $this->assignmentService->toggleStatus($id);
+        return response()->json($assignment, 200);
     }
 }

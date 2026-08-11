@@ -3,19 +3,19 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
-use App\Repositories\DriverProfileRepository;
+use App\Repositories\AssignmentRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthService
 {
     protected UserRepository $userRepo;
-    protected DriverProfileRepository $driverProfileRepo;
+    protected AssignmentRepository $assignmentRepo;
 
-    public function __construct(UserRepository $userRepo, DriverProfileRepository $driverProfileRepo)
+    public function __construct(UserRepository $userRepo, AssignmentRepository $assignmentRepo)
     {
         $this->userRepo = $userRepo;
-        $this->driverProfileRepo = $driverProfileRepo;
+        $this->assignmentRepo = $assignmentRepo;
     }
 
     public function login(string $email, string $password)
@@ -35,30 +35,30 @@ class AuthService
 
         // Validate driver constraints
         if ($user->rol && $user->rol->rol_name === 'conductor') {
-            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
+            $assignment = $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
 
-            if (!$driverProfile) {
+            if (!$assignment) {
                 auth('api')->logout();
                 throw new \Exception('No tienes un perfil de conductor asignado.');
             }
 
-            if (!$driverProfile->is_active) {
+            if (!$assignment->is_active) {
                 auth('api')->logout();
                 throw new \Exception('Tu perfil de conductor se encuentra inactivo.');
             }
 
-            if (!$driverProfile->shift) {
+            if (!$assignment->shift) {
                 auth('api')->logout();
                 throw new \Exception('No tienes un horario asignado.');
             }
 
             // Check if shift is active
-            if ($driverProfile->shift && !$driverProfile->shift->is_active) {
+            if ($assignment->shift && !$assignment->shift->is_active) {
                 auth('api')->logout();
                 throw new \Exception('Tu horario asignado se encuentra inactivo.');
             }
 
-            if ($driverProfile->vehicle && $driverProfile->vehicle->status === 'inactive') {
+            if ($assignment->vehicle && $assignment->vehicle->status === 'inactive') {
                 auth('api')->logout();
                 throw new \Exception('Tu vehículo asignado se encuentra inactivo.');
             }
@@ -66,10 +66,12 @@ class AuthService
             // We do NOT block login if vehicle is in maintenance anymore
             // (Handled by respondWithToken)
 
-            if ($driverProfile->shift) {
+            $hasActiveEvent = $assignment->events->isNotEmpty();
+
+            if ($assignment->shift && !$hasActiveEvent) {
                 $now = \Carbon\Carbon::now('America/Guayaquil');
-                $startTime = \Carbon\Carbon::parse($driverProfile->shift->start_time, 'America/Guayaquil');
-                $endTime = \Carbon\Carbon::parse($driverProfile->shift->end_time, 'America/Guayaquil');
+                $startTime = \Carbon\Carbon::parse($assignment->shift->start_time, 'America/Guayaquil');
+                $endTime = \Carbon\Carbon::parse($assignment->shift->end_time, 'America/Guayaquil');
 
                 if ($endTime->lessThan($startTime)) {
                     // Shift spans across midnight
@@ -109,6 +111,11 @@ class AuthService
 
     public function logout()
     {
+        $user = auth('api')->user();
+        if ($user && $user->rol && $user->rol->rol_name === 'conductor') {
+            app(\App\Services\LocationService::class)->setDriverOffline($user->id);
+        }
+        
         auth('api')->logout();
         return true;
     }
@@ -123,8 +130,8 @@ class AuthService
         
         $isMaintenance = false;
         if ($user->rol && $user->rol->rol_name === 'conductor') {
-            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
-            if ($driverProfile && $driverProfile->vehicle && $driverProfile->vehicle->status === 'maintenance') {
+            $assignment = $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
+            if ($assignment && $assignment->vehicle && $assignment->vehicle->status === 'maintenance') {
                 $isMaintenance = true;
             }
         }
@@ -162,8 +169,8 @@ class AuthService
         
         $isMaintenance = false;
         if ($user->rol && $user->rol->rol_name === 'conductor') {
-            $driverProfile = $this->driverProfileRepo->getActiveProfileByUserId($user->id);
-            if ($driverProfile && $driverProfile->vehicle && $driverProfile->vehicle->status === 'maintenance') {
+            $assignment = $this->assignmentRepo->getActiveAssignmentByUserId($user->id);
+            if ($assignment && $assignment->vehicle && $assignment->vehicle->status === 'maintenance') {
                 $isMaintenance = true;
             }
         }

@@ -14,7 +14,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\DriverProfileController;
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\VehicleController;
 
@@ -33,14 +33,14 @@ Route::middleware('auth:api')->group(function () {
 
     Route::post('/devices', [DeviceController::class, 'store']);
 
-    // Shifts, Events, and Driver Profiles (Assignments)
+    // Shifts, Events, and Assignments
     Route::apiResource('shifts', ShiftController::class);
     Route::patch('/shifts/{id}/toggle-status', [ShiftController::class, 'toggleStatus']);
     
     Route::apiResource('events', EventController::class);
     
-    Route::apiResource('driver-profiles', DriverProfileController::class);
-    Route::patch('/driver-profiles/{id}/toggle-status', [DriverProfileController::class, 'toggleStatus']);
+    Route::apiResource('assignments', AssignmentController::class);
+    Route::patch('/assignments/{id}/toggle-status', [AssignmentController::class, 'toggleStatus']);
 
     // Complaints
     Route::post('/complaints', [ComplaintController::class, 'store']);

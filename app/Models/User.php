@@ -58,9 +58,9 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Rol::class);
     }
 
-    public function driverProfile()
+    public function assignment()
     {
-        return $this->hasOne(DriverProfile::class);
+        return $this->hasOne(Assignment::class);
     }
 
     public function ratingProfile(): HasOne

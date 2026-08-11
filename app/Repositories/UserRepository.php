@@ -15,7 +15,7 @@ class UserRepository
 
     public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        $query = User::withTrashed()->with(['rol', 'ratingProfile', 'driverProfile.shift']);
+        $query = User::withTrashed()->with(['rol', 'ratingProfile', 'assignment.shift']);
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -83,8 +83,8 @@ class UserRepository
             if ($roleName === 'conductor') {
                 $data['score'] = $user->ratingProfile ? $user->ratingProfile->score : 5.0;
                 
-                if ($user->driverProfile && $user->driverProfile->shift) {
-                    $shift = $user->driverProfile->shift;
+                if ($user->assignment && $user->assignment->shift) {
+                    $shift = $user->assignment->shift;
                     $now = now()->format('H:i:s');
                     $data['is_in_shift'] = $now >= $shift->start_time && $now <= $shift->end_time;
                     $data['shift_id'] = $shift->id;

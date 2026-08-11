@@ -16,8 +16,8 @@ class Event extends Model
         'end_date',
     ];
 
-    public function vehicles()
+    public function assignments()
     {
-        return $this->belongsToMany(Vehicle::class, 'event_vehicle');
+        return $this->belongsToMany(Assignment::class, 'assignment_event');
     }
 }

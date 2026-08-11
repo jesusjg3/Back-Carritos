@@ -111,8 +111,8 @@ class UserService
         }
 
         $user = $this->userRepo->find($id);
-        if ($user->driverProfile()->exists()) {
-            throw new \Exception('No se puede eliminar el conductor porque tiene una asignación activa.');
+        if ($user->assignment()->exists()) {
+            throw new \Exception('No se puede eliminar el usuario porque tiene una asignación de conductor.');
         }
 
         $this->userRepo->delete($id);

@@ -25,13 +25,8 @@ class Vehicle extends Model
         'capacity' => 'integer',
     ];
 
-    public function driverProfiles()
+    public function assignments()
     {
-        return $this->hasMany(DriverProfile::class);
-    }
-
-    public function events()
-    {
-        return $this->belongsToMany(Event::class, 'event_vehicle');
+        return $this->hasMany(Assignment::class);
     }
 }

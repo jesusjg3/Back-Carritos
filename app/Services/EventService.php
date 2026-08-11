@@ -28,8 +28,8 @@ class EventService
         $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date'])->toArray();
         $event = $this->eventRepo->create($eventData);
 
-        if (isset($data['vehicle_ids'])) {
-            $this->eventRepo->syncVehicles($event, $data['vehicle_ids']);
+        if (isset($data['assignment_ids'])) {
+            $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
         }
 
         return $this->eventRepo->find($event->id);
@@ -40,8 +40,8 @@ class EventService
         $eventData = collect($data)->only(['name', 'description', 'start_date', 'end_date'])->toArray();
         $event = $this->eventRepo->update($id, $eventData);
 
-        if (isset($data['vehicle_ids'])) {
-            $this->eventRepo->syncVehicles($event, $data['vehicle_ids']);
+        if (isset($data['assignment_ids'])) {
+            $this->eventRepo->syncAssignments($event, $data['assignment_ids']);
         }
 
         return $this->eventRepo->find($event->id);

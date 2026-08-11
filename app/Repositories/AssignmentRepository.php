@@ -2,23 +2,25 @@
 
 namespace App\Repositories;
 
-use App\Models\DriverProfile;
+use App\Models\Assignment;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class DriverProfileRepository
+class AssignmentRepository
 {
-    public function getActiveProfileByUserId(int $userId): ?DriverProfile
+    public function getActiveAssignmentByUserId(int $userId): ?Assignment
     {
-        // Status has been removed from migration and replaced with softDeletes.
-        // It's sufficient to check if the record exists since deleted_at takes care of inactive ones.
-        return DriverProfile::where('user_id', $userId)
-            ->with(['vehicle', 'shift'])
+        return Assignment::where('user_id', $userId)
+            ->with(['vehicle', 'shift', 'events' => function ($query) {
+                $now = \Carbon\Carbon::now('America/Guayaquil');
+                $query->where('start_date', '<=', $now)
+                      ->where('end_date', '>=', $now);
+            }])
             ->first();
     }
     
     public function all($search = null, $perPage = 10, $status = null): LengthAwarePaginator | array
     {
-        $query = DriverProfile::withTrashed()->with([
+        $query = Assignment::withTrashed()->with([
             'user' => fn($q) => $q->select('id', 'name', 'email')->withTrashed(),
             'shift' => fn($q) => $q->select('id', 'name', 'start_time', 'end_time')->withTrashed(),
             'vehicle' => fn($q) => $q->select('id', 'brand', 'model', 'plate')->withTrashed()
@@ -40,7 +42,7 @@ class DriverProfileRepository
             }
         }
 
-        $baseCountQuery = DriverProfile::withTrashed();
+        $baseCountQuery = Assignment::withTrashed();
         if ($search) {
             $baseCountQuery->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'ilike', '%' . $search . '%');
@@ -61,43 +63,38 @@ class DriverProfileRepository
         return $result;
     }
 
-    public function find(int $id)
+    public function find(int $id): ?Assignment
     {
-        $profile = DriverProfile::withTrashed()->findOrFail($id);
-        $profile->load([
+        return Assignment::withTrashed()->with([
             'user' => fn($q) => $q->select('id', 'name', 'email')->withTrashed(),
             'shift' => fn($q) => $q->select('id', 'name', 'start_time', 'end_time')->withTrashed(),
             'vehicle' => fn($q) => $q->select('id', 'brand', 'model', 'plate')->withTrashed()
-        ]);
-        return $profile;
+        ])->findOrFail($id);
     }
 
-    public function create(array $data)
+    public function create(array $data): Assignment
     {
-        $profile = DriverProfile::create($data);
-        $profile->load(['user', 'shift', 'vehicle']);
-        return $profile;
+        return Assignment::create($data);
     }
 
-    public function update(int $id, array $data)
+    public function update(int $id, array $data): Assignment
     {
-        $profile = $this->find($id);
-        $profile->update($data);
-        $profile->load(['user', 'shift', 'vehicle']);
-        return $profile;
+        $assignment = $this->find($id);
+        $assignment->update($data);
+        return $assignment;
     }
 
-    public function delete(int $id)
+    public function delete(int $id): bool
     {
-        $profile = $this->find($id);
-        return $profile->delete();
+        $assignment = $this->find($id);
+        return $assignment->delete();
     }
 
-    public function toggleStatus(int $id)
+    public function toggleStatus(int $id): Assignment
     {
-        $profile = $this->find($id);
-        $profile->is_active = !$profile->is_active;
-        $profile->save();
-        return $profile;
+        $assignment = $this->find($id);
+        $assignment->is_active = !$assignment->is_active;
+        $assignment->save();
+        return $assignment;
     }
 }

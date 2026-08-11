@@ -119,13 +119,13 @@ class ReportRepository
     public function getDailySummary(?string $startDate = null, ?string $endDate = null): array
     {
         $query = Trip::where('state_id', State::FINISHED);
-        
+
         if ($startDate) {
             $query->where('created_at', '>=', $startDate);
         } else {
             $query->where('created_at', '>=', now()->subDays(15));
         }
-        
+
         if ($endDate) {
             $query->where('created_at', '<=', $endDate . ' 23:59:59');
         }
@@ -166,7 +166,7 @@ class ReportRepository
     {
         $query = DB::table('trip_ratings')
             ->join('users', 'trip_ratings.emitter_id', '=', 'users.id');
-        
+
         if ($startDate) $query->where('trip_ratings.created_at', '>=', $startDate);
         if ($endDate) $query->where('trip_ratings.created_at', '<=', $endDate . ' 23:59:59');
 
@@ -192,13 +192,13 @@ class ReportRepository
         $query = Trip::where('state_id', State::FINISHED)
                      ->whereNotIn('origin_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
                      ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada']);
-        
+
         if ($startDate) {
             $query->where('created_at', '>=', $startDate);
         } else {
             $query->where('created_at', '>=', now()->subDays(15));
         }
-        
+
         if ($endDate) {
             $query->where('created_at', '<=', $endDate . ' 23:59:59');
         }
@@ -228,7 +228,7 @@ class ReportRepository
             ->whereNotIn('origin_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
             ->whereNotIn('destination_address', ['Mi Ubicación Actual', 'Ubicación personalizada'])
             ->groupBy('origin_address', 'destination_address');
-        
+
         if ($startDate) $query->where('created_at', '>=', $startDate);
         if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
 
@@ -313,7 +313,7 @@ class ReportRepository
     public function getTripsCoordinates(?string $startDate = null, ?string $endDate = null): array
     {
         $query = Trip::whereNotNull('origin_lat')->whereNotNull('origin_lng');
-        
+
         if ($startDate) $query->where('created_at', '>=', $startDate);
         if ($endDate) $query->where('created_at', '<=', $endDate . ' 23:59:59');
 
@@ -361,6 +361,7 @@ class ReportRepository
                 'trips' => $tripsQuery->count(),
                 'active' => $activeTripsQuery->count(),
                 'completed' => $completedTripsQuery->count(),
+                'approved_disconnects' => Cache::get('driver.disconnect.approved_ids', [])
             ];
     }
 }
