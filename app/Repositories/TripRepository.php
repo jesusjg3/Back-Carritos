@@ -4,8 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Trip;
 use App\Models\TripPassenger;
-use App\Models\DriverLocation;
 use App\Models\State;
+use App\Models\DriverLocation;
 use Illuminate\Support\Facades\DB;
 
 class TripRepository
@@ -138,7 +138,7 @@ class TripRepository
                      ->where('assignments.is_active', true);
             })
             ->join('vehicles', 'assignments.vehicle_id', '=', 'vehicles.id')
-            ->whereIn('trips.state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
+            ->whereIn('trips.state_id', [State::ACCEPTED, State::STARTED])
             ->where('trips.destination_address', $destinationAddress)
             // Filtramos aquellos viajes donde el número de asientos ocupados más los que pide el nuevo no exceda la capacidad del vehículo
             ->whereRaw('COALESCE((SELECT COUNT(*) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= vehicles.capacity', [$availableSeatsRequired])
@@ -147,12 +147,16 @@ class TripRepository
             ->get();
     }
 
-    public function addPassengerToTrip(int $tripId, int $passengerId, string $status = 'requested')
+    public function addPassengerToTrip(int $tripId, int $passengerId, string $status = 'requested', array $pickupData = [])
     {
         return TripPassenger::create([
             'trip_id' => $tripId,
             'passenger_id' => $passengerId,
-            'status' => $status
+            'status' => $status,
+            'pickup_lat' => $pickupData['pickup_lat'] ?? null,
+            'pickup_lng' => $pickupData['pickup_lng'] ?? null,
+            'pickup_address' => $pickupData['pickup_address'] ?? null,
+            'passengers_count' => $pickupData['passengers_count'] ?? 1,
         ]);
     }
 
@@ -165,7 +169,7 @@ class TripRepository
 
     public function updatePassengerStatus(int $tripId, int $passengerId, string $status)
     {
-        return DB::table('trip_passenger')
+        return DB::table('trip_passengers')
             ->where('trip_id', $tripId)
             ->where('passenger_id', $passengerId)
             ->update([
@@ -198,6 +202,14 @@ class TripRepository
         return Trip::where('driver_id', $driverId)
             ->whereIn('state_id', [State::ACCEPTED, State::STARTED])
             ->first();
+    }
+
+    public function getBusyDriverIds(): array
+    {
+        return Trip::whereIn('state_id', [State::ACCEPTED, State::STARTED])
+            ->whereNotNull('driver_id')
+            ->pluck('driver_id')
+            ->toArray();
     }
 }
 

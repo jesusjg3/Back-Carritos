@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Trip;
+use App\Models\TripPassenger;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -35,7 +36,9 @@ class TripFinished implements ShouldBroadcastNow
     {
         $channels = [];
         foreach ($this->trip->passengers as $passenger) {
-            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            if ($passenger->pivot && $passenger->pivot->status === TripPassenger::STATUS_DROPPED_OFF) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
         }
         return $channels;
     }

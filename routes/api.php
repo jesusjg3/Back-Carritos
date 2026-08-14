@@ -110,6 +110,7 @@ Route::middleware('auth:api')->group(function () {
 
         Route::post('/trips/request', [TripController::class, 'request']);
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
+        Route::post('/trips/{id}/accept-passenger', [TripController::class, 'acceptPassenger']);
         Route::post('/trips/{id}/start', [TripController::class, 'start']);
         Route::post('/trips/{tripId}/board/{passengerId}', [TripController::class, 'boardPassenger']);
         Route::post('/trips/{tripId}/dropoff/{passengerId}', [TripController::class, 'dropOffPassenger']);

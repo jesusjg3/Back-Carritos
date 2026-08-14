@@ -59,6 +59,27 @@ class TripController extends Controller
     }
 
     /**
+     * Accept a joining passenger for an active Trip (Driver).
+     */
+    public function acceptPassenger(Request $request, int $id): JsonResponse
+    {
+        $user = Auth::user();
+        $passengerId = $request->input('passenger_id');
+
+        if (!$passengerId) {
+            return response()->json(['error' => 'Se requiere el ID del pasajero.'], 400);
+        }
+
+        try {
+            $updatedTrip = $this->tripService->acceptPassengerInTrip($id, $user, $passengerId);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = $e->getCode() === 409 ? 409 : 400;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    /**
      * Start a Trip (Driver picked up passenger).
      */
     public function start(int $id): JsonResponse

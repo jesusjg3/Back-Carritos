@@ -66,7 +66,19 @@ class TripStarted implements ShouldBroadcastNow
                     'lat' => $this->trip->destination_lat,
                     'lng' => $this->trip->destination_lng,
                     'address' => $this->trip->destination_address
-                ]
+                ],
+                'passengers' => $this->trip->passengers->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'phone' => $p->phone,
+                        'status' => $p->pivot->status,
+                        'pickup_lat' => $p->pivot->pickup_lat,
+                        'pickup_lng' => $p->pivot->pickup_lng,
+                        'pickup_address' => $p->pivot->pickup_address,
+                        'passengers_count' => $p->pivot->passengers_count,
+                    ];
+                })
             ]
         ];
     }

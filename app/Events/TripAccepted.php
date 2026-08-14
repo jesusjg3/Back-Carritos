@@ -18,13 +18,15 @@ class TripAccepted implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $trip;
+    public $passengerId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Trip $trip)
+    public function __construct(Trip $trip, ?int $passengerId = null)
     {
         $this->trip = $trip;
+        $this->passengerId = $passengerId;
     }
 
     /**
@@ -35,8 +37,12 @@ class TripAccepted implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [];
-        foreach ($this->trip->passengers as $passenger) {
-            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+        if ($this->passengerId) {
+            $channels[] = new PrivateChannel('passenger.' . $this->passengerId);
+        } else {
+            foreach ($this->trip->passengers as $passenger) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
         }
         return $channels;
     }
@@ -69,7 +75,19 @@ class TripAccepted implements ShouldBroadcastNow
                     'lat' => $this->trip->destination_lat,
                     'lng' => $this->trip->destination_lng,
                     'address' => $this->trip->destination_address
-                ]
+                ],
+                'passengers' => $this->trip->passengers->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'phone' => $p->phone,
+                        'status' => $p->pivot->status,
+                        'pickup_lat' => $p->pivot->pickup_lat,
+                        'pickup_lng' => $p->pivot->pickup_lng,
+                        'pickup_address' => $p->pivot->pickup_address,
+                        'passengers_count' => $p->pivot->passengers_count,
+                    ];
+                })
             ]
         ];
     }

@@ -177,8 +177,15 @@ class LocationService
     {
         $activeEventVehicleIds = $this->getActiveEventVehicleIds();
 
+        // Obtener conductores que actualmente tienen un viaje activo (para no mostrarlos a usuarios genéricos)
+        $busyDriverIds = $this->tripRepo->getBusyDriverIds();
+
         $drivers = [];
         foreach ($this->getActiveDriverIds() as $driverId) {
+            if (in_array($driverId, $busyDriverIds)) {
+                continue;
+            }
+
             $location = Cache::get($this->getDriverLocationKey($driverId));
 
             if (!is_array($location)) {

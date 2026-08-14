@@ -9,6 +9,12 @@ class TripPassenger extends Pivot
 {
     use SoftDeletes;
 
+    const STATUS_REQUESTED = 'requested';
+    const STATUS_ACCEPTED = 'accepted';
+    const STATUS_BOARDED = 'boarded';
+    const STATUS_DROPPED_OFF = 'dropped_off';
+    const STATUS_CANCELLED = 'cancelled';
+
     protected $table = 'trip_passengers';
 
     public $incrementing = true;
@@ -17,6 +23,10 @@ class TripPassenger extends Pivot
         'trip_id',
         'passenger_id',
         'status',
+        'pickup_lat',
+        'pickup_lng',
+        'pickup_address',
+        'passengers_count',
     ];
 
     public function trip()
