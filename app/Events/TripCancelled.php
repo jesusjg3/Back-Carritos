@@ -15,10 +15,12 @@ class TripCancelled implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $trip;
+    public $excludedPassengerIds;
 
-    public function __construct(Trip $trip)
+    public function __construct(Trip $trip, array $excludedPassengerIds = [])
     {
         $this->trip = $trip;
+        $this->excludedPassengerIds = $excludedPassengerIds;
     }
 
     public function broadcastWith()
@@ -38,7 +40,9 @@ class TripCancelled implements ShouldBroadcastNow
     {
         $channels = [new PrivateChannel('drivers')];
         foreach ($this->trip->passengers as $passenger) {
-            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            if (!in_array($passenger->id, $this->excludedPassengerIds)) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
         }
         return $channels;
     }

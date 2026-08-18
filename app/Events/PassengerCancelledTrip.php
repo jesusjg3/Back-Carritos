@@ -16,11 +16,13 @@ class PassengerCancelledTrip implements ShouldBroadcastNow
 
     public $trip;
     public $passengerId;
+    public $reason;
 
-    public function __construct(Trip $trip, int $passengerId)
+    public function __construct(Trip $trip, int $passengerId, string $reason = null)
     {
         $this->trip = $trip;
         $this->passengerId = $passengerId;
+        $this->reason = $reason;
     }
 
     public function broadcastWith()
@@ -28,6 +30,7 @@ class PassengerCancelledTrip implements ShouldBroadcastNow
         return [
             'trip_id' => $this->trip->id,
             'passenger_id' => $this->passengerId,
+            'reason' => $this->reason,
             'trip' => $this->trip,
         ];
     }

@@ -97,34 +97,50 @@ class TripService
     {
         return DB::transaction(function () use ($data, $user) {
             
-            // Buscar viajes activos compartidos
-            $activeTrips = $this->tripRepo->findActiveTripsForRoute($data['destination_address'], $data['passengers_count'] ?? 1);
+            // Buscar viajes activos compartidos excluyendo donde el usuario ya fue rechazado
+            $activeTrips = $this->tripRepo->findActiveTripsForRoute($data['destination_address'], $data['passengers_count'] ?? 1, $user->id);
             
             if ($activeTrips->isNotEmpty()) {
-                $trip = $activeTrips->first();
-                
-                // Verificar si el usuario ya está en este viaje
-                $existingPassenger = $this->tripRepo->getPassengerInTrip($trip->id, $user->id);
+                foreach ($activeTrips as $trip) {
+                    $driverLocation = $this->tripRepo->getDriverLocation($trip->driver_id);
+                    
+                    if ($driverLocation && isset($driverLocation['latitude']) && isset($driverLocation['longitude'])) {
+                        // Validar con OSRM si el desvío es aceptable
+                        $isValidDetour = \App\Helpers\GeoHelper::isDetourValid(
+                            $driverLocation['latitude'],
+                            $driverLocation['longitude'],
+                            $data['origin_lat'],
+                            $data['origin_lng'],
+                            $trip->destination_lat,
+                            $trip->destination_lng
+                        );
 
-                $pickupData = [
-                    'pickup_lat' => $data['origin_lat'] ?? null,
-                    'pickup_lng' => $data['origin_lng'] ?? null,
-                    'pickup_address' => $data['origin_address'] ?? null,
-                    'passengers_count' => $data['passengers_count'] ?? 1,
-                ];
+                        if (!$isValidDetour) {
+                            continue; // Ignorar este viaje y probar con el siguiente
+                        }
+                    }
 
-                if (!$existingPassenger) {
-                    $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested', $pickupData);
-                } else if ($existingPassenger->status === 'cancelled') {
-                    $this->tripRepo->updatePassengerStatus($trip->id, $user->id, 'requested');
+                    // Verificar si el usuario ya está en este viaje
+                    $existingPassenger = $this->tripRepo->getPassengerInTrip($trip->id, $user->id);
+
+                    $pickupData = [
+                        'pickup_lat' => $data['origin_lat'] ?? null,
+                        'pickup_lng' => $data['origin_lng'] ?? null,
+                        'pickup_address' => $data['origin_address'] ?? null,
+                        'passengers_count' => $data['passengers_count'] ?? 1,
+                    ];
+
+                    if (!$existingPassenger) {
+                        $this->tripRepo->addPassengerToTrip($trip->id, $user->id, 'requested', $pickupData);
+                    } else if ($existingPassenger->status === 'cancelled') {
+                        $this->tripRepo->updatePassengerStatus($trip->id, $user->id, 'requested', $pickupData);
+                    }
+                    
+                    $trip->load(['passengers', 'driver', 'state']);
+                    
+                    broadcast(new \App\Events\PassengerJoinRequested($trip, $user, $data));
+                    return $this->formatTripResponse($trip);
                 }
-                // Si ya está como 'requested', 'accepted', etc., no hacemos insert, 
-                // simplemente reenviamos el evento para que los conductores lo vuelvan a ver.
-                
-                $trip->load(['passengers', 'driver', 'state']);
-                
-                broadcast(new \App\Events\PassengerJoinRequested($trip, $user, $data));
-                return $this->formatTripResponse($trip);
             }
 
             // Crear uno nuevo si no hay compatibles
@@ -342,7 +358,7 @@ class TripService
                 $this->tripRepo->updateAllPassengersStatus($trip->id, TripPassenger::STATUS_BOARDED, TripPassenger::STATUS_CANCELLED);
 
                 $trip->load(['passengers', 'driver', 'state']);
-                broadcast(new TripCancelled($trip));
+                broadcast(new TripCancelled($trip, [$passengerId]));
             } else {
                 $trip->load(['passengers', 'driver', 'state']);
                 // Se podría emitir un evento específico, pero el polling o re-render
@@ -356,6 +372,28 @@ class TripService
                 "El conductor ha cancelado tu asignación en este viaje."
             );
 
+            return $this->formatTripResponse($trip);
+        });
+    }
+
+    public function rejectPassenger(int $tripId, int $passengerId, User $driver)
+    {
+        return DB::transaction(function () use ($tripId, $passengerId, $driver) {
+            $trip = $this->tripRepo->findLocked($tripId);
+            
+            if ($trip->driver_id !== $driver->id) {
+                throw new Exception('No autorizado para rechazar a este pasajero.', 403);
+            }
+            
+            // Marcar al pasajero como cancelado
+            $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, TripPassenger::STATUS_CANCELLED);
+            
+            // Usamos un flag especial o enviamos un evento con una razón
+            // En este caso PassengerCancelledTrip ya tiene trip y passengerId.
+            // Para distinguirlo, pasaremos un extra.
+            broadcast(new PassengerCancelledTrip($trip, $passengerId, 'auto_retry'));
+
+            $trip->load(['passengers', 'driver', 'state']);
             return $this->formatTripResponse($trip);
         });
     }
@@ -444,11 +482,22 @@ class TripService
                     'state_id' => State::CANCELLED,
                     'cancel_reason' => $reason
                 ]);
+
+                $autoRetryIds = [];
+                foreach ($trip->passengers as $p) {
+                    $status = $p->pivot->status ?? 'cancelled';
+                    if (in_array($status, ['requested', 'accepted'])) {
+                        $autoRetryIds[] = $p->id;
+                        broadcast(new PassengerCancelledTrip($trip, $p->id, 'auto_retry'));
+                    }
+                }
+
                 $this->tripRepo->cancelAllPassengers($tripId);
             }
 
             $trip->load(['passengers', 'driver', 'state']);
-            broadcast(new TripCancelled($trip));
+            $excludedIds = isset($autoRetryIds) ? $autoRetryIds : [];
+            broadcast(new TripCancelled($trip, $excludedIds));
 
             if ($roleName === 'pasajero' && $trip->driver_id) {
                 SendPushNotificationJob::dispatch(
@@ -547,6 +596,18 @@ class TripService
                 ] : null
             ];
         });
+    }
+
+    public function getCurrentActiveTrip(User $user)
+    {
+        $trip = $this->tripRepo->getCurrentActiveTripForUser($user->id);
+        
+        if ($trip) {
+            $trip->load(['passengers', 'driver', 'state']);
+            return $this->formatTripResponse($trip);
+        }
+
+        return null;
     }
 }
 

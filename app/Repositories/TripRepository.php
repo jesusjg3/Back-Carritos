@@ -130,21 +130,31 @@ class TripRepository
         return null;
     }
 
-    public function findActiveTripsForRoute(string $destinationAddress, int $availableSeatsRequired = 1)
+    public function findActiveTripsForRoute(string $destinationAddress, int $availableSeatsRequired = 1, ?int $excludePassengerId = null)
     {
-        return Trip::select('trips.*')
+        $query = Trip::select('trips.*')
             ->join('assignments', function ($join) {
                 $join->on('trips.driver_id', '=', 'assignments.user_id')
                      ->where('assignments.is_active', true);
             })
             ->join('vehicles', 'assignments.vehicle_id', '=', 'vehicles.id')
-            ->whereIn('trips.state_id', [State::ACCEPTED, State::STARTED])
+            ->whereIn('trips.state_id', [State::STARTED])
             ->where('trips.destination_address', $destinationAddress)
             // Filtramos aquellos viajes donde el número de asientos ocupados más los que pide el nuevo no exceda la capacidad del vehículo
-            ->whereRaw('COALESCE((SELECT COUNT(*) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= vehicles.capacity', [$availableSeatsRequired])
+            ->whereRaw('COALESCE((SELECT SUM(passengers_count) FROM trip_passengers tp WHERE tp.trip_id = trips.id AND tp.status NOT IN (\'cancelled\', \'dropped_off\')), 0) + ? <= vehicles.capacity', [$availableSeatsRequired])
             ->orderBy('trips.created_at', 'desc')
-            ->lockForUpdate()
-            ->get();
+            ->lockForUpdate();
+
+        if ($excludePassengerId) {
+            $query->whereNotIn('trips.id', function($q) use ($excludePassengerId) {
+                $q->select('trip_id')
+                  ->from('trip_passengers')
+                  ->where('passenger_id', $excludePassengerId)
+                  ->where('status', 'cancelled');
+            });
+        }
+
+        return $query->get();
     }
 
     public function addPassengerToTrip(int $tripId, int $passengerId, string $status = 'requested', array $pickupData = [])
@@ -167,15 +177,54 @@ class TripRepository
             ->first();
     }
 
-    public function updatePassengerStatus(int $tripId, int $passengerId, string $status)
+    public function getCurrentActiveTripForUser(int $userId)
     {
+        // Priorizar si es pasajero
+        $passengerTrip = Trip::select('trips.*')
+            ->join('trip_passengers', 'trips.id', '=', 'trip_passengers.trip_id')
+            ->where('trip_passengers.passenger_id', $userId)
+            ->whereIn('trip_passengers.status', [
+                'requested',
+                'accepted',
+                'boarded'
+            ])
+            ->whereIn('trips.state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
+            ->first();
+
+        if ($passengerTrip) {
+            return $passengerTrip;
+        }
+
+        // Si no es pasajero activo, buscar si es conductor activo
+        return Trip::where('driver_id', $userId)
+            ->whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED])
+            ->first();
+    }
+
+    public function updatePassengerStatus(int $tripId, int $passengerId, string $status, array $pickupData = [])
+    {
+        $data = [
+            'status' => $status,
+            'updated_at' => now()
+        ];
+
+        if (array_key_exists('pickup_lat', $pickupData)) {
+            $data['pickup_lat'] = $pickupData['pickup_lat'];
+        }
+        if (array_key_exists('pickup_lng', $pickupData)) {
+            $data['pickup_lng'] = $pickupData['pickup_lng'];
+        }
+        if (array_key_exists('pickup_address', $pickupData)) {
+            $data['pickup_address'] = $pickupData['pickup_address'];
+        }
+        if (array_key_exists('passengers_count', $pickupData)) {
+            $data['passengers_count'] = $pickupData['passengers_count'];
+        }
+
         return DB::table('trip_passengers')
             ->where('trip_id', $tripId)
             ->where('passenger_id', $passengerId)
-            ->update([
-                'status' => $status,
-                'updated_at' => now()
-            ]);
+            ->update($data);
     }
 
     public function updateAllPassengersStatus(int $tripId, string $oldStatus, string $newStatus)

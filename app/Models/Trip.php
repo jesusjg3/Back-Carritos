@@ -24,7 +24,7 @@ class Trip extends Model
     public function passengers()
     {
         return $this->belongsToMany(User::class, 'trip_passengers', 'trip_id', 'passenger_id')
-                    ->withPivot('status')
+                    ->withPivot('status', 'pickup_lat', 'pickup_lng', 'pickup_address', 'passengers_count')
                     ->withTimestamps()
                     ->orderBy('trip_passengers.created_at', 'asc');
     }

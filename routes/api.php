@@ -108,13 +108,15 @@ Route::middleware('auth:api')->group(function () {
             Route::apiResource('states', StateController::class);
         });
 
-        Route::post('/trips/request', [TripController::class, 'request']);
+        Route::get('/trips/current', [TripController::class, 'current']);
+        Route::post('/trips/request', [TripController::class, 'request'])->middleware('throttle:5,1');
         Route::post('/trips/{id}/accept', [TripController::class, 'accept']);
         Route::post('/trips/{id}/accept-passenger', [TripController::class, 'acceptPassenger']);
         Route::post('/trips/{id}/start', [TripController::class, 'start']);
         Route::post('/trips/{tripId}/board/{passengerId}', [TripController::class, 'boardPassenger']);
         Route::post('/trips/{tripId}/dropoff/{passengerId}', [TripController::class, 'dropOffPassenger']);
         Route::post('/trips/{tripId}/cancel-passenger/{passengerId}', [TripController::class, 'cancelPassenger']);
+        Route::post('/trips/{tripId}/reject-passenger/{passengerId}', [TripController::class, 'rejectPassenger']);
         Route::post('/trips/{id}/finish', [TripController::class, 'finish']);
         Route::delete('/trips/{id}/cancel', [TripController::class, 'cancel']);
         Route::post('/trips/{id}/position', [TripPositionController::class, 'store']);
