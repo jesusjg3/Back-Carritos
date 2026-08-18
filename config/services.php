@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'osrm' => [
+        'url' => env('OSRM_URL', 'http://router.project-osrm.org/route/v1/driving/'),
+    ],
+
 ];

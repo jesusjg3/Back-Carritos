@@ -7,10 +7,6 @@ use Illuminate\Support\Facades\Log;
 
 class GeoHelper
 {
-    /**
-     * OSRM Server URL
-     */
-    const OSRM_URL = 'http://192.168.10.96:5000/route/v1/driving/';
 
     /**
      * Verifica si el desvío es válido para Carpooling consultando a OSRM.
@@ -28,12 +24,14 @@ class GeoHelper
     public static function isDetourValid($driverLat, $driverLng, $pickupLat, $pickupLng, $destLat, $destLng): bool
     {
         try {
+            $osrmUrl = config('services.osrm.url', 'http://router.project-osrm.org/route/v1/driving/');
+
             // 1. Ruta Directa (Conductor -> Destino Final)
-            $directUrl = self::OSRM_URL . "{$driverLng},{$driverLat};{$destLng},{$destLat}?overview=false";
+            $directUrl = $osrmUrl . "{$driverLng},{$driverLat};{$destLng},{$destLat}?overview=false";
             $directResponse = Http::timeout(3)->get($directUrl);
 
             // 2. Ruta con Desvío (Conductor -> Pasajero B -> Destino Final)
-            $detourUrl = self::OSRM_URL . "{$driverLng},{$driverLat};{$pickupLng},{$pickupLat};{$destLng},{$destLat}?overview=false";
+            $detourUrl = $osrmUrl . "{$driverLng},{$driverLat};{$pickupLng},{$pickupLat};{$destLng},{$destLat}?overview=false";
             $detourResponse = Http::timeout(3)->get($detourUrl);
 
             if (!$directResponse->successful() || !$detourResponse->successful()) {
