@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\AssignmentRepository;
+use App\Models\Rol;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -99,11 +100,19 @@ class AuthService
 
     public function register(array $data)
     {
+        $passengerRoleId = Rol::where('rol_name', 'pasajero')->value('id');
+
+        if (!$passengerRoleId) {
+            throw new \RuntimeException('El rol de pasajero no está configurado.');
+        }
+
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'rol_id' => $data['role_id'],
+            // El registro público siempre crea pasajeros. Los roles internos
+            // se asignan únicamente desde el panel administrativo protegido.
+            'rol_id' => $passengerRoleId,
             'is_active' => true,
         ]);
 
@@ -166,6 +175,10 @@ class AuthService
             throw new \Exception('Usuario no autenticado.');
         }
 
+        if (!$user->is_active) {
+            throw new \Exception('Su cuenta ha sido desactivada.');
+        }
+
         if (!$user->relationLoaded('rol')) {
             $user = $this->userRepo->find($user->id);
         }
@@ -204,12 +217,15 @@ class AuthService
 
     public function refresh()
     {
-        $token = auth('api')->refresh();
         $user = auth('api')->user();
+
+        if (!$user || !$user->is_active) {
+            throw new \Exception('Su cuenta ha sido desactivada.');
+        }
+
+        $token = auth('api')->refresh();
 
         return $this->respondWithToken($token, $user);
     }
 }
-
-
 

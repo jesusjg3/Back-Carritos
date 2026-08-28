@@ -91,7 +91,7 @@ class DriverLocationController extends Controller
     public function getOnlineDrivers(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = $user && $user->rol_id === 1;
+        $isAdmin = $user && $user->rol?->rol_name === 'admin';
 
         $drivers = $this->locationService->getOnlineDrivers($isAdmin);
 

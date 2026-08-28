@@ -128,9 +128,11 @@ class LocationService
             $isInEvent = in_array($vehicle->id, $activeEventVehicleIds);
         }
 
+        $isAvailable = !in_array($driverId, $this->tripRepo->getBusyDriverIds(), true);
+
         try {
             $vStatus = $vehicle ? $vehicle->status : 'active';
-            broadcast(new DriverGlobalLocationUpdated($driverId, (float) $data['latitude'], (float) $data['longitude'], $vStatus, $driverName, $payload['vehicle'], $isInEvent));
+            broadcast(new DriverGlobalLocationUpdated($driverId, (float) $data['latitude'], (float) $data['longitude'], $vStatus, $driverName, $payload['vehicle'], $isInEvent, $isAvailable));
         } catch (Exception $e) {
             Log::error("Error broadcasting DriverGlobalLocationUpdated: " . $e->getMessage());
         }

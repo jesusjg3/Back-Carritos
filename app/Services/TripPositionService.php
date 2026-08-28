@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Trip;
 use App\Models\TripPosition;
 use App\Models\User;
+use App\Models\State;
 use App\Repositories\TripPositionRepository;
 use App\Repositories\TripRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -32,6 +33,10 @@ class TripPositionService
             throw new \Exception('No autorizado para enviar posición de esta carrera.', 403);
         }
 
+        if (!in_array($trip->state_id, [State::ACCEPTED, State::STARTED], true)) {
+            throw new \Exception('Solo se puede enviar posición en un viaje activo.', 400);
+        }
+
         return $this->tripPositionRepo->create([
             'trip_id' => $trip->id,
             'lat' => $lat,
@@ -40,6 +45,5 @@ class TripPositionService
         ]);
     }
 }
-
 
 

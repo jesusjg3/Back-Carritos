@@ -2,7 +2,6 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -20,11 +19,12 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
     public ?string $name;
     public ?array $vehicle;
     public bool $isInEvent;
+    public bool $isAvailable;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $driverId, float $latitude, float $longitude, string $vehicleStatus = 'active', ?string $name = null, ?array $vehicle = null, bool $isInEvent = false)
+    public function __construct(int $driverId, float $latitude, float $longitude, string $vehicleStatus = 'active', ?string $name = null, ?array $vehicle = null, bool $isInEvent = false, bool $isAvailable = true)
     {
         $this->driverId = $driverId;
         $this->latitude = $latitude;
@@ -33,6 +33,7 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
         $this->name = $name;
         $this->vehicle = $vehicle;
         $this->isInEvent = $isInEvent;
+        $this->isAvailable = $isAvailable;
     }
 
     /**
@@ -42,17 +43,10 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        // Siempre emitir al canal privado del administrador
-        $channels = [
+        return [
             new PrivateChannel('admin.live_tracking'),
+            new PrivateChannel('drivers.live'),
         ];
-
-        // Emitir al canal público solo si no está en un evento
-        if (!$this->isInEvent) {
-            $channels[] = new Channel('drivers.live');
-        }
-
-        return $channels;
     }
 
     /**
@@ -68,6 +62,7 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
             'name' => $this->name,
             'vehicle' => $this->vehicle,
             'is_in_event' => $this->isInEvent,
+            'is_available' => $this->isAvailable,
             'timestamp' => now()->toISOString(),
         ];
     }

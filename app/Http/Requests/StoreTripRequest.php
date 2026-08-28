@@ -56,10 +56,11 @@ class StoreTripRequest extends FormRequest
             $lat = $this->input('origin_lat');
             $lng = $this->input('origin_lng');
 
-            if ($lat && $lng) {
-                // Punto central aproximado del campus
-                $centerLat = -0.9525;
-                $centerLng = -80.7450;
+            if ($lat !== null && $lng !== null && config('services.campus.geofence_enabled', true)) {
+                // Punto central y radio configurables del campus.
+                $centerLat = (float) config('services.campus.latitude');
+                $centerLng = (float) config('services.campus.longitude');
+                $radiusKm = (float) config('services.campus.radius_km');
                 
                 // Calcular distancia en km (Fórmula de Haversine)
                 $earthRadius = 6371;
@@ -69,16 +70,10 @@ class StoreTripRequest extends FormRequest
                 $haversineValC = 2 * atan2(sqrt($haversineValA), sqrt(1-$haversineValA));
                 $distance = $earthRadius * $haversineValC;
 
-                // Límite de distancia de 1.5 km (Desactivado temporalmente para pruebas desde casa)
-                /*
-                if ($distance > 1.5) {
+                if ($distance > $radiusKm) {
                     $validator->errors()->add('origin_lat', 'Estás fuera de la zona de servicio permitida para pedir carritos.');
                 }
-                */
             }
         });
     }
 }
-
-
-

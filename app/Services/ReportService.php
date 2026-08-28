@@ -135,7 +135,8 @@ class ReportService
      */
     public function getDashboardStats(?string $startDate = null, ?string $endDate = null): array
     {
-        $cacheKey = $this->getCacheKey('dashboard_stats', $startDate, $endDate);
+        // v2 invalida el caché generado antes de incluir métricas de quejas.
+        $cacheKey = $this->getCacheKey('dashboard_stats_v2', $startDate, $endDate);
         return Cache::remember($cacheKey, 15, function () use ($startDate, $endDate) {
             $stats = $this->reportRepo->getDashboardStats($startDate, $endDate);
             $cancellations = $this->reportRepo->getCancellationsOverTime($startDate, $endDate);
@@ -152,7 +153,7 @@ class ReportService
      */
     public function broadcastDashboardUpdates()
     {
-        $cacheKey = $this->getCacheKey('dashboard_stats', null, null);
+        $cacheKey = $this->getCacheKey('dashboard_stats_v2', null, null);
         Cache::forget($cacheKey);
         
         $stats = $this->getDashboardStats();

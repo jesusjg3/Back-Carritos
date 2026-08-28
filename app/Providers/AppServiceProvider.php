@@ -10,6 +10,8 @@ use App\Models\Trip;
 use App\Observers\TripObserver;
 use App\Models\Destination;
 use App\Observers\DestinationObserver;
+use App\Observers\ComplaintObserver;
+use App\Models\Complaint;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,8 +31,8 @@ class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Trip::observe(TripObserver::class);
         Destination::observe(DestinationObserver::class);
+        Complaint::observe(ComplaintObserver::class);
     }
 }
-
 
 

@@ -20,7 +20,7 @@ class TripPositionController extends Controller
     public function store(StoreTripPositionRequest $request, int $tripId): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = auth('api')->user();
             
             $position = $this->positionService->storePosition(
                 $tripId,
@@ -34,13 +34,12 @@ class TripPositionController extends Controller
         } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Carrera no encontrada'], 404);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 400;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 400;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
 
 
 }
-
 
 

@@ -1,120 +1,100 @@
-# Back-Carritos Backend
+# Carritos — API backend
 
-[![Laravel Logo](https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg)](https://laravel.com)
+API REST para la gestión de transporte interno universitario. Está construida con Laravel 12, PHP 8.2+, PostgreSQL, JWT y Laravel Reverb.
 
-This is the backend API for the Carritos mobile application, built with Laravel.
+## Requisitos
 
-## Prerequisites
+- PHP 8.2 o superior con extensión PDO PostgreSQL.
+- Composer.
+- PostgreSQL 14 o superior.
+- Node.js y npm si se desea ejecutar herramientas frontend desde el proyecto Laravel.
 
-- PHP >= 8.2
-- Composer
-- PostgreSQL
+## Instalación local
 
-## Installation & Setup
+```bash
+cd Back-Carritos
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+```
 
-Follow these steps to set up the project locally:
+Crea la base de datos `carritos` en PostgreSQL y completa las credenciales en `.env`. Luego ejecuta:
 
-1. **Clone the repository**
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-    ```bash
-    git clone <repository-url>
-    cd Back-Carritos
-    ```
+Si cambias variables de entorno con la configuración cacheada, ejecuta `php artisan config:clear` antes de reiniciar los servicios.
 
-2. **Environment Configuration**
-    Copy the example environment file and configure it:
+El seeder crea roles, permisos, destinos, vehículos, horarios y datos de demostración.
 
-    ```bash
-    cp .env.example .env
-    ```
+## Ejecución
 
-    Update the `.env` file with your database credentials and Reverb (WebSocket) host.
-    **IMPORTANT:** Set `REVERB_HOST` to your local machine's IP address (e.g., 192.168.x.x) if you are testing with a mobile device or other computers on the network.
+En terminales separadas:
 
-    ```ini
-    DB_CONNECTION=pgsql
-    DB_HOST=127.0.0.1
-    DB_PORT=5432
-    DB_DATABASE=carritos
-    DB_USERNAME=your_username
-    DB_PASSWORD=your_password
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+php artisan reverb:start --host=0.0.0.0 --port=8080
+php artisan queue:work
+```
 
-    # Reverb Configuration (WebSockets)
-    REVERB_HOST=localhost # CHANGE THIS to your local IP
-    REVERB_PORT=8080
-    REVERB_SCHEME=http
-    ```
+Para consultar las rutas disponibles:
 
-    **Note:** Make sure to create a PostgreSQL database named `carritos` before running migrations.
+```bash
+php artisan route:list --path=api
+```
 
-3. **Install PHP Dependencies**
+## Configuración importante
 
-    ```bash
-    composer install
-    ```
+- `CAMPUS_GEOFENCE_ENABLED` activa o desactiva la geocerca. En producción debe estar en `true`; puede permanecer en `false` durante pruebas desde fuera del campus.
+- `CAMPUS_CENTER_LAT`, `CAMPUS_CENTER_LNG` y `CAMPUS_RADIUS_KM` controlan el centro y el radio permitido en kilómetros. La API rechaza solicitudes cuyo origen esté fuera del radio cuando la geocerca está activa.
+- `OSRM_URL` configura el servicio de cálculo de rutas.
+- `REVERB_HOST`, `REVERB_PORT` y `REVERB_SCHEME` configuran los WebSockets.
+- La ubicación y las estadísticas se transmiten por canales privados; Reverb debe estar levantado y el usuario debe conservar un token activo.
+- `QUEUE_CONNECTION=database` requiere ejecutar el worker para procesar notificaciones push.
+- Nunca se deben publicar `.env`, secretos JWT, credenciales de servicios externos ni llaves de Firebase.
 
-4. **Database Permissions (Important)**
-    Ensure your database user has the necessary permissions on the `public` schema. If you encounter permission errors, run:
+## Usuarios de demostración
 
-    ```bash
-    sudo -u postgres psql -d carritos -c 'GRANT ALL ON SCHEMA public TO <your_username>;'
-    ```
+Después de ejecutar los seeders:
 
-5. **Generate Application Key**
+| Rol | Correo | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin@test.com` | `12345678` |
+| Pasajero | `pasajero@test.com` | `12345678` |
+| Conductor | `conductor@test.com` | `12345678` |
 
-    ```bash
-    php artisan key:generate
-    ```
+Son credenciales de desarrollo; deben cambiarse antes de cualquier despliegue.
 
-6. **Generate JWT Secret**
-    Required for authentication:
+## Pruebas
 
-    ```bash
-    php artisan jwt:secret
-    ```
+```bash
+php artisan test
+```
 
-7. **Run Migrations & Seeders**
-    Create tables and populate initial data (roles, etc.):
+Para una comprobación rápida de geocerca, rutas protegidas, estados y calificaciones compartidas:
 
-    ```bash
-    php artisan migrate
-    php artisan db:seed
-    ```
+```bash
+php artisan test --filter='SecurityRegressionTest|TripRatingServiceTest'
+```
 
-### Test Users
+Los archivos `.rest` contienen escenarios manuales para autenticación y ciclo de viajes. Los endpoints de prueba de broadcast no forman parte de la API y no deben agregarse nuevamente a producción.
 
-Use these accounts to log in after running the seeders:
+## Arquitectura resumida
 
-- **Admin**: `admin@test.com` / `12345678`
-- **Pasajero**: `pasajero@test.com` / `12345678`
-- **Conductor**: `conductor@test.com` / `12345678`
+- `app/Http`: controladores, Form Requests y middleware.
+- `app/Services`: reglas de negocio y coordinación de casos de uso.
+- `app/Repositories`: consultas y persistencia.
+- `app/Models`: entidades, relaciones y estados.
+- `app/Events`: eventos de Reverb para actualizaciones en tiempo real.
+- `app/Jobs`: tareas asíncronas, principalmente notificaciones push.
+- `database`: migraciones y seeders reproducibles.
+- `routes/api.php`: contrato HTTP de la aplicación.
 
-## Useful Commands
+En viajes compartidos, el conductor envía una sola calificación y comentario; el backend los aplica a todos los pasajeros que fueron dejados en destino.
 
-- **Run Server**: `php artisan serve --host=yourlocalip` (Change to your local IP)
-- **Start Reverb (WebSockets)**: `php artisan reverb:start --host=yourlocalip --port=8080`
-- **Tinker**: `php artisan tinker`
-- **Route List**: `php artisan route:list`
+## Seguridad
 
-## Troubleshooting
-
-- **Undefined table "rols"**: Ensure you have run `php artisan migrate`.
-- **JWTException: Secret is not set**: Run `php artisan jwt:secret`.
-- **Permission denied for schema public**: Grant schema permissions to your DB user (see Step 4).
-
-## Funcionalidades Clave
-
-### Geofencing (Límite de Zona de Servicio)
-El backend incluye una doble validación de ubicación para evitar que usuarios soliciten viajes fuera de la universidad. 
-- **Validación Backend:** En `StoreTripRequest`, la fórmula de Haversine valida estrictamente que la latitud y longitud de origen del pasajero se encuentren dentro de un **radio de 1.5 kilómetros** del punto central del campus. Si el viaje se origina fuera de este límite, el servidor rechaza la petición con un error HTTP 422.
-
-### Notificaciones Push (Expo)
-El backend utiliza la API HTTP v2 de Expo para enviar notificaciones Push a los dispositivos de los usuarios (cuando un viaje es solicitado, aceptado, iniciado o finalizado).
-- **Servicio Principal:** `app/Services/ExpoPushService.php`.
-- Este servicio recoge el token de FCM del usuario desde la tabla `user_devices` y envía un request POST a `https://exp.host/--/api/v2/push/send`.
-- Para que las notificaciones lleguen correctamente a la app de Android cuando está en segundo plano (minimizada), se asegura de inyectar el parámetro `"channelId" => "default"` en el payload enviado a Expo.
-- **Requiere:** Que el frontend tenga correctamente cargado su `Service Account Key` en la página de credenciales de [expo.dev](https://expo.dev) (para permitir a Expo hablar con los servidores de Google FCM).
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+El registro público crea exclusivamente pasajeros. La administración de usuarios, vehículos, destinos, horarios, asignaciones, eventos, reportes y quejas requiere autenticación, usuario activo y el permiso correspondiente.

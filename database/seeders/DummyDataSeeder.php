@@ -99,13 +99,13 @@ class DummyDataSeeder extends Seeder
             $driver = $drivers[array_rand($drivers)];
 
             // Definir estado
-            // 65 terminados, 10 cancelados, 3 en viaje, 2 solicitados
+            // 65 terminados, 10 cancelados, 3 iniciados, 2 solicitados
             if ($index <= 65) {
                 $stateId = 3; // TERMINADO
             } elseif ($index <= 75) {
-                $stateId = 4; // CANCELADO
+                $stateId = 5; // CANCELADO
             } elseif ($index <= 78) {
-                $stateId = 2; // EN VIAJE
+                $stateId = 4; // INICIADO
             } else {
                 $stateId = 1; // SOLICITADO
             }
@@ -143,9 +143,10 @@ class DummyDataSeeder extends Seeder
             // Determine the correct status for the passenger
             $passengerStatus = match ($stateId) {
                 1 => 'requested',
-                2 => 'boarded',
+                2 => 'accepted',
                 3 => 'dropped_off',
-                4 => 'cancelled',
+                4 => 'boarded',
+                5 => 'cancelled',
                 default => 'requested',
             };
 

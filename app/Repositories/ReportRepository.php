@@ -308,10 +308,12 @@ class ReportRepository
             $tripsQuery = Trip::query();
             $completedTripsQuery = Trip::where('state_id', State::FINISHED);
             $activeTripsQuery = Trip::whereIn('state_id', [State::REQUESTED, State::ACCEPTED, State::STARTED]);
+            $complaintsQuery = Complaint::query();
 
             $this->applyDateFilters($tripsQuery, $startDate, $endDate);
             $this->applyDateFilters($completedTripsQuery, $startDate, $endDate);
             $this->applyDateFilters($activeTripsQuery, $startDate, $endDate);
+            $this->applyDateFilters($complaintsQuery, $startDate, $endDate);
 
             return [
                 'users' => User::withTrashed()->count(),
@@ -323,6 +325,8 @@ class ReportRepository
                 'trips' => $tripsQuery->count(),
                 'active' => $activeTripsQuery->count(),
                 'completed' => $completedTripsQuery->count(),
+                'complaints' => (clone $complaintsQuery)->count(),
+                'pending_complaints' => (clone $complaintsQuery)->where('status', 'pending')->count(),
                 'approved_disconnects' => Cache::get('driver.disconnect.approved_ids', [])
             ];
     }

@@ -37,7 +37,13 @@ class TripController extends Controller
     public function request(StoreTripRequest $request): JsonResponse
     {
         $user = Auth::user();
-        $trip = $this->tripService->requestTrip($request->validated(), $user);
+
+        try {
+            $trip = $this->tripService->requestTrip($request->validated(), $user);
+        } catch (\Exception $e) {
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
 
         return response()->json($trip, 201);
     }
@@ -54,7 +60,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->acceptTripById($id, $user, $passengerId);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 409 ? 409 : 400;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 400;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -75,7 +81,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->acceptPassengerInTrip($id, $user, $passengerId);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 409 ? 409 : 400;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 400;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -91,7 +97,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->startTrip($id, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 400 ? 400 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -104,7 +110,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->boardPassenger($tripId, $passengerId, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -117,7 +123,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->dropOffPassenger($tripId, $passengerId, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -131,7 +137,7 @@ class TripController extends Controller
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
             Log::error("cancelPassenger Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -145,7 +151,7 @@ class TripController extends Controller
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
             Log::error("rejectPassenger Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -161,7 +167,7 @@ class TripController extends Controller
             $updatedTrip = $this->tripService->finishTrip($id, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -191,7 +197,9 @@ class TripController extends Controller
     public function cancel(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        $reason = $request->input('reason');
+        $reason = $request->validate([
+            'reason' => 'nullable|string|max:255',
+        ])['reason'] ?? null;
         
         try {
             $result = $this->tripService->cancelTrip($id, $user, $reason);

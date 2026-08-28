@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -23,7 +23,7 @@ class DashboardStatsUpdated implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        return new Channel('dashboard.stats');
+        return new PrivateChannel('dashboard.stats');
     }
 
     public function broadcastAs()

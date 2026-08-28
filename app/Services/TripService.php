@@ -96,6 +96,9 @@ class TripService
     public function requestTrip(array $data, User $user)
     {
         return DB::transaction(function () use ($data, $user) {
+            if ($this->tripRepo->getCurrentActiveTripForUser($user->id)) {
+                throw new Exception('Ya tienes un viaje activo.', 409);
+            }
             
             // Buscar viajes activos compartidos excluyendo donde el usuario ya fue rechazado
             $activeTrips = $this->tripRepo->findActiveTripsForRoute($data['destination_address'], $data['passengers_count'] ?? 1, $user->id);
@@ -168,6 +171,10 @@ class TripService
         return DB::transaction(function () use ($tripId, $driver, $passengerId) {
             $trip = $this->tripRepo->findLocked($tripId);
 
+            if ($trip->state_id !== State::REQUESTED) {
+                throw new Exception('El viaje ya no está disponible para aceptar.', 409);
+            }
+
             if ($trip->driver_id !== null && $trip->driver_id !== $driver->id) {
                 throw new Exception('El viaje ya fue tomado por otro conductor.', 409);
             }
@@ -181,9 +188,16 @@ class TripService
             }
             
             if ($passengerId) {
+                $passenger = $this->tripRepo->getPassengerInTrip($tripId, $passengerId);
+                if (!$passenger || $passenger->status !== TripPassenger::STATUS_REQUESTED) {
+                    throw new Exception('La solicitud del pasajero ya no es válida.', 400);
+                }
                 $this->tripRepo->updatePassengerStatus($tripId, $passengerId, TripPassenger::STATUS_ACCEPTED);
             } else {
-                $this->tripRepo->updateAllPassengersStatus($tripId, TripPassenger::STATUS_REQUESTED, TripPassenger::STATUS_ACCEPTED);
+                $accepted = $this->tripRepo->updateAllPassengersStatus($tripId, TripPassenger::STATUS_REQUESTED, TripPassenger::STATUS_ACCEPTED);
+                if ($accepted === 0) {
+                    throw new Exception('El viaje no tiene solicitudes pendientes.', 409);
+                }
             }
 
             $trip->load(['passengers', 'driver', 'state']);
@@ -273,6 +287,10 @@ class TripService
                 return $this->formatTripResponse($trip);
             }
 
+            if ($trip->state_id !== State::ACCEPTED) {
+                throw new Exception('Solo se puede iniciar un viaje aceptado.', 400);
+            }
+
             $trip = $this->tripRepo->update($trip, [
                 'state_id' => State::STARTED,
                 'started_at' => now(),
@@ -305,6 +323,15 @@ class TripService
             if ($trip->driver_id !== $driver->id) {
                 throw new Exception('No autorizado.', 403);
             }
+
+            if ($trip->state_id !== State::STARTED) {
+                throw new Exception('El viaje debe estar iniciado para abordar pasajeros.', 400);
+            }
+
+            $passenger = $this->tripRepo->getPassengerInTrip($trip->id, $passengerId);
+            if (!$passenger || $passenger->status !== TripPassenger::STATUS_ACCEPTED) {
+                throw new Exception('El pasajero no tiene una solicitud aceptada para abordar.', 400);
+            }
             
             $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, TripPassenger::STATUS_BOARDED);
                 
@@ -323,6 +350,15 @@ class TripService
             if ($trip->driver_id !== $driver->id) {
                 throw new Exception('No autorizado.', 403);
             }
+
+            if ($trip->state_id !== State::STARTED) {
+                throw new Exception('El viaje debe estar iniciado para bajar pasajeros.', 400);
+            }
+
+            $passenger = $this->tripRepo->getPassengerInTrip($trip->id, $passengerId);
+            if (!$passenger || $passenger->status !== TripPassenger::STATUS_BOARDED) {
+                throw new Exception('El pasajero no está abordo en este viaje.', 400);
+            }
             
             $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, TripPassenger::STATUS_DROPPED_OFF);
                 
@@ -340,6 +376,15 @@ class TripService
             
             if ($trip->driver_id !== $driver->id) {
                 throw new Exception('No autorizado para cancelar este pasajero.', 403);
+            }
+
+            if (!in_array($trip->state_id, [State::ACCEPTED, State::STARTED], true)) {
+                throw new Exception('El viaje no permite cancelar pasajeros.', 400);
+            }
+
+            $passenger = $this->tripRepo->getPassengerInTrip($trip->id, $passengerId);
+            if (!$passenger || !in_array($passenger->status, [TripPassenger::STATUS_REQUESTED, TripPassenger::STATUS_ACCEPTED], true)) {
+                throw new Exception('El pasajero no tiene una solicitud cancelable.', 400);
             }
             
             // Marcar solo al pasajero como cancelado
@@ -384,6 +429,15 @@ class TripService
             if ($trip->driver_id !== $driver->id) {
                 throw new Exception('No autorizado para rechazar a este pasajero.', 403);
             }
+
+            if (!in_array($trip->state_id, [State::ACCEPTED, State::STARTED], true)) {
+                throw new Exception('El viaje no permite rechazar pasajeros.', 400);
+            }
+
+            $passenger = $this->tripRepo->getPassengerInTrip($tripId, $passengerId);
+            if (!$passenger || $passenger->status !== TripPassenger::STATUS_REQUESTED) {
+                throw new Exception('La solicitud del pasajero ya no es válida.', 400);
+            }
             
             // Marcar al pasajero como cancelado
             $this->tripRepo->updatePassengerStatus($trip->id, $passengerId, TripPassenger::STATUS_CANCELLED);
@@ -405,6 +459,10 @@ class TripService
             
             if ($trip->driver_id !== $user->id) {
                 throw new Exception('No autorizado para finalizar este viaje.', 403);
+            }
+
+            if ($trip->state_id !== State::STARTED) {
+                throw new Exception('Solo se puede finalizar un viaje iniciado.', 400);
             }
 
             $trip = $this->tripRepo->update($trip, [
@@ -451,6 +509,11 @@ class TripService
             $roleName = $user->rol->rol_name;
 
             if ($roleName === 'pasajero') {
+                $passenger = $this->tripRepo->getPassengerInTrip($tripId, $user->id);
+                if (!$passenger || !in_array($passenger->status, [TripPassenger::STATUS_REQUESTED, TripPassenger::STATUS_ACCEPTED, TripPassenger::STATUS_BOARDED], true)) {
+                    throw new Exception('No perteneces a un viaje activo con este identificador.', 403);
+                }
+
                 $this->tripRepo->updatePassengerStatus($tripId, $user->id, 'cancelled');
                     
                 $activePassengers = $this->tripRepo->getActivePassengersCount($tripId);
@@ -472,6 +535,10 @@ class TripService
             } else if ($roleName === 'conductor') {
                 if ($trip->driver_id !== $user->id) {
                     throw new Exception('No autorizado para cancelar este viaje.', 403);
+                }
+
+                if (!in_array($trip->state_id, [State::ACCEPTED, State::STARTED], true)) {
+                    throw new Exception('El viaje no permite cancelación en este estado.', 400);
                 }
                 
                 if (empty($reason)) {
@@ -572,7 +639,13 @@ class TripService
 
     public function getTripHistory(User $user)
     {
-        $trips = $this->tripRepo->getByPassenger($user->id);
+        if (!$user->relationLoaded('rol')) {
+            $user->load('rol');
+        }
+
+        $trips = $user->rol?->rol_name === 'conductor'
+            ? $this->tripRepo->getByDriver($user->id)
+            : $this->tripRepo->getByPassenger($user->id);
         $trips->load(['driver', 'state']);
 
         $trips->load([
@@ -610,6 +683,3 @@ class TripService
         return null;
     }
 }
-
-
-
