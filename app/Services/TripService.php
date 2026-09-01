@@ -637,24 +637,26 @@ class TripService
         ];
     }
 
-    public function getTripHistory(User $user)
+    public function getTripHistory(User $user, int $perPage = 15)
     {
         if (!$user->relationLoaded('rol')) {
             $user->load('rol');
         }
 
+        $perPage = max(1, min($perPage, 50));
         $trips = $user->rol?->rol_name === 'conductor'
-            ? $this->tripRepo->getByDriver($user->id)
-            : $this->tripRepo->getByPassenger($user->id);
-        $trips->load(['driver', 'state']);
+            ? $this->tripRepo->getByDriver($user->id, $perPage)
+            : $this->tripRepo->getByPassenger($user->id, $perPage);
 
-        $trips->load([
+        $trips->getCollection()->load(['driver', 'state']);
+
+        $trips->getCollection()->load([
             'ratings' => function ($query) use ($user) {
                 $query->where('emitter_id', $user->id);
             }
         ]);
 
-        return $trips->map(function ($trip) {
+        $trips->getCollection()->transform(function ($trip) {
             $myRating = $trip->ratings->first();
             return [
                 'id' => $trip->id,
@@ -669,6 +671,8 @@ class TripService
                 ] : null
             ];
         });
+
+        return $trips;
     }
 
     public function getCurrentActiveTrip(User $user)

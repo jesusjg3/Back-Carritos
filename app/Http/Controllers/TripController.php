@@ -212,10 +212,11 @@ class TripController extends Controller
     /**
      * Get Trip History for Passenger.
      */
-    public function history(): JsonResponse
+    public function history(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $history = $this->tripService->getTripHistory($user);
+        $perPage = $request->integer('per_page', 15);
+        $history = $this->tripService->getTripHistory($user, $perPage);
         return response()->json($history);
     }
 }

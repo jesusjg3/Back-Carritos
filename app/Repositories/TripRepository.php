@@ -88,16 +88,18 @@ class TripRepository
         return Trip::create($data);
     }
 
-    public function getByDriver(int $driverId)
+    public function getByDriver(int $driverId, int $perPage = 15)
     {
-        return Trip::where('driver_id', $driverId)->get();
+        return Trip::where('driver_id', $driverId)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
     }
 
-    public function getByPassenger(int $passengerId)
+    public function getByPassenger(int $passengerId, int $perPage = 15)
     {
         return Trip::whereHas('passengers', function($q) use ($passengerId) {
             $q->where('users.id', $passengerId);
-        })->orderBy('created_at', 'desc')->get();
+        })->orderByDesc('created_at')->paginate($perPage);
     }
 
     public function findLocked(int $id): Trip
@@ -261,4 +263,3 @@ class TripRepository
             ->toArray();
     }
 }
-
