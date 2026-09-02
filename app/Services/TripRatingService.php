@@ -131,11 +131,11 @@ class TripRatingService
         });
     }
 
-    public function getRatingsReceived(User $user): array
+    public function getRatingsReceived(User $user, int $perPage = 12)
     {
-        $ratings = $this->tripRatingRepo->getReceivedOneByUser($user->id);
+        $ratings = $this->tripRatingRepo->getReceivedOneByUser($user->id, $perPage);
 
-        return $ratings->map(function ($rating) {
+        $ratings->getCollection()->transform(function ($rating) {
             return [
                 'id' => $rating->id,
                 'trip_id' => $rating->trip_id,
@@ -146,7 +146,8 @@ class TripRatingService
                     'name' => $rating->emitter->name,
                 ] : null,
             ];
-        })->toArray();
+        });
+
+        return $ratings;
     }
 }
-

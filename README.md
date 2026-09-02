@@ -23,12 +23,13 @@ Crea la base de datos `carritos` en PostgreSQL y completa las credenciales en `.
 
 ```bash
 php artisan migrate
+# Solo en desarrollo/pruebas:
 php artisan db:seed
 ```
 
 Si cambias variables de entorno con la configuración cacheada, ejecuta `php artisan config:clear` antes de reiniciar los servicios.
 
-El seeder crea roles, permisos, destinos, vehículos, horarios y datos de demostración.
+El seeder crea roles, permisos, destinos, vehículos, horarios, usuarios de prueba y datos de demostración. En la base de datos cloud de producción ejecuta únicamente las migraciones; no ejecutes `php artisan db:seed` salvo que quieras cargar datos de demostración.
 
 ## Ejecución
 
@@ -66,7 +67,13 @@ Después de ejecutar los seeders:
 | Pasajero | `pasajero@test.com` | `12345678` |
 | Conductor | `conductor@test.com` | `12345678` |
 
-Son credenciales de desarrollo; deben cambiarse antes de cualquier despliegue.
+Son credenciales de desarrollo. Pueden mantenerse para una simulación controlada de producción, pero no deben quedar habilitadas con esas contraseñas en un despliegue público.
+
+## Despliegue de la API en la nube
+
+Para Azure u otro proveedor, `composer.json` y `composer.lock` sí deben conservarse: permiten instalar exactamente las dependencias del backend durante el despliegue. El proveedor necesitará un `.env` propio con nuevas claves (`APP_KEY` y `JWT_SECRET`), `APP_ENV=production`, `APP_DEBUG=false`, la URL de PostgreSQL administrado, las credenciales de Reverb y una URL de OSRM accesible desde el servidor cloud.
+
+Los seeders no son necesarios para arrancar la API y no se ejecutan automáticamente. No hace falta agregarlos al `.gitignore`: si están versionados, viajarán como código, pero solo modifican la base de datos cuando se invoca explícitamente `db:seed`. Para evitar datos de prueba en la nube, basta con no ejecutar ese comando.
 
 ## Pruebas
 

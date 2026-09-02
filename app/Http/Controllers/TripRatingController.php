@@ -7,6 +7,7 @@ use App\Models\Trip;
 use App\Models\User;
 use App\Services\TripRatingService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
@@ -38,17 +39,17 @@ class TripRatingController extends Controller
         }
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            $ratings = $this->ratingService->getRatingsReceived($user);
+            $perPage = min(max($request->integer('per_page', 12), 1), 30);
+            $ratings = $this->ratingService->getRatingsReceived($user, $perPage);
             return response()->json($ratings);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 }
-
 
 
