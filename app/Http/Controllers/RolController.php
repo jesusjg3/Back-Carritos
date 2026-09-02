@@ -6,6 +6,8 @@ use App\Http\Requests\StoreRolRequest;
 use App\Http\Requests\UpdateRolRequest;
 use App\Services\RolService;
 use Illuminate\Http\JsonResponse;
+use App\Models\AuditLog;
+use App\Models\Rol;
 
 class RolController extends Controller
 {
@@ -31,21 +33,25 @@ class RolController extends Controller
     public function store(StoreRolRequest $request): JsonResponse
     {
         $rol = $this->rolService->createRol($request->validated());
+        AuditLog::record('role.created', $rol, [], $rol->toArray());
         return response()->json($rol, 201);
     }
 
     public function update(UpdateRolRequest $request, int $id): JsonResponse
     {
+        $before = Rol::findOrFail($id)->toArray();
         $rol = $this->rolService->updateRol($id, $request->validated());
+        AuditLog::record('role.updated', $rol, $before, $rol->toArray());
         return response()->json($rol);
     }
 
     public function destroy(int $id): JsonResponse
     {
+        $before = Rol::findOrFail($id)->toArray();
         $this->rolService->deleteRol($id);
+        AuditLog::record('role.deleted', $id, $before);
         return response()->json(null, 204);
     }
 }
-
 
 

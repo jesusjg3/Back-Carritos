@@ -8,6 +8,8 @@ use App\Services\ComplaintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AuditLog;
+use App\Models\Complaint;
 
 class ComplaintController extends Controller
 {
@@ -43,7 +45,9 @@ class ComplaintController extends Controller
 
     public function updateStatus(UpdateComplaintStatusRequest $request, int $id): JsonResponse
     {
+        $before = Complaint::findOrFail($id)->toArray();
         $complaint = $this->complaintService->updateComplaintStatus($id, $request->validated());
+        AuditLog::record('complaint.status_updated', $complaint, $before, $complaint->toArray());
         return response()->json($complaint, 200);
     }
 }

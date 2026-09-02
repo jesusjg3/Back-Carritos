@@ -101,7 +101,8 @@ return [
     |
     */
 
-    'ttl' => (int) env('JWT_TTL', 129600),
+    // Tokens de acceso de corta duración; los clientes usan /refresh.
+    'ttl' => (int) env('JWT_TTL', 60),
 
     /*
     |--------------------------------------------------------------------------
