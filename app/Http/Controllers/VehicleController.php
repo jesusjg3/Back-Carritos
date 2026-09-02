@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Services\VehicleService;
+use App\Models\AuditLog;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
 
 class VehicleController extends Controller
@@ -36,6 +38,7 @@ class VehicleController extends Controller
     public function store(StoreVehicleRequest $request)
     {
         $vehicle = $this->vehicleService->createVehicle($request->validated());
+        AuditLog::record('vehicle.created', $vehicle, [], $vehicle->toArray());
 
         return response()->json([
             'message' => 'Vehículo creado exitosamente.',
@@ -57,7 +60,9 @@ class VehicleController extends Controller
      */
     public function update(UpdateVehicleRequest $request, int $id)
     {
+        $before = Vehicle::findOrFail($id)->toArray();
         $vehicle = $this->vehicleService->updateVehicle($id, $request->validated());
+        AuditLog::record('vehicle.updated', $vehicle, $before, $vehicle->toArray());
 
         return response()->json([
             'message' => 'Vehículo actualizado exitosamente.',
@@ -70,7 +75,9 @@ class VehicleController extends Controller
      */
     public function destroy(int $id)
     {
+        $before = Vehicle::findOrFail($id)->toArray();
         $this->vehicleService->deleteVehicle($id);
+        AuditLog::record('vehicle.deleted', $id, $before);
         return response()->json(['message' => 'Vehículo eliminado exitosamente.']);
     }
 }

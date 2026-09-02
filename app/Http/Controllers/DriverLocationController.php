@@ -8,6 +8,7 @@ use App\Services\LocationService;
 use App\Services\DisconnectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\AuditLog;
 
 class DriverLocationController extends Controller
 {
@@ -64,6 +65,7 @@ class DriverLocationController extends Controller
     {
 
         $this->disconnectService->approveDisconnect($id);
+        AuditLog::record('disconnect.approved', $id);
 
         return response()->json(['message' => 'Desconexión del conductor aprobada.']);
     }
@@ -72,6 +74,7 @@ class DriverLocationController extends Controller
     {
 
         $this->disconnectService->rejectDisconnect($id);
+        AuditLog::record('disconnect.rejected', $id);
 
         return response()->json(['message' => 'Desconexión del conductor rechazada.']);
     }

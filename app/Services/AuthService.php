@@ -162,6 +162,8 @@ class AuthService
                 'role_id' => $user->rol_id,
                 'is_active' => $user->is_active,
                 'permissions' => $user->permissions->pluck('name')->toArray(),
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
                 'vehicle_maintenance' => $isMaintenance,
             ],
         ];
@@ -228,4 +230,3 @@ class AuthService
         return $this->respondWithToken($token, $user);
     }
 }
-

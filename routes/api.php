@@ -17,6 +17,8 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\PermissionController;
 
 // Public
 Route::get('/destinations', [DestinationController::class, 'index']);
@@ -65,6 +67,7 @@ Route::middleware('auth:api')->group(function () {
 
         Route::middleware('permission:view_dashboard')->group(function () {
             Route::get('/dashboard/stats', [ReportController::class, 'dashboardStats']);
+            Route::get('/dashboard/drivers', [UserController::class, 'listDashboardDrivers']);
         });
 
         Route::middleware('permission:view_driver_reports')->group(function () {
@@ -91,6 +94,7 @@ Route::middleware('auth:api')->group(function () {
         Route::middleware('permission:manage_users')->group(function () {
             Route::get('/users', [UserController::class, 'listUsers']);
             Route::post('/users/drivers', [UserController::class, 'storeDriver']);
+            Route::post('/users/passengers', [UserController::class, 'storePassenger']);
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             Route::put('/users/{id}', [UserController::class, 'updateUser']);
             Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
@@ -98,6 +102,15 @@ Route::middleware('auth:api')->group(function () {
 
         Route::middleware('permission:manage_admins')->group(function () {
             Route::post('/users/admins', [UserController::class, 'storeAdmin']);
+            Route::get('/users/admins', [UserController::class, 'listAdmins']);
+            Route::get('/permissions', [PermissionController::class, 'index']);
+            Route::put('/users/admins/{id}', [UserController::class, 'updateAdmin']);
+            Route::patch('/users/admins/{id}/toggle-status', [UserController::class, 'toggleAdminStatus']);
+            Route::delete('/users/admins/{id}', [UserController::class, 'deleteAdmin']);
+        });
+
+        Route::middleware('permission:view_audit_log')->group(function () {
+            Route::get('/audit-logs', [AuditLogController::class, 'index']);
         });
 
         Route::middleware('permission:manage_vehicles')->group(function () {

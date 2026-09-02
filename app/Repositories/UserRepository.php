@@ -15,7 +15,7 @@ class UserRepository
 
     public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        $query = User::withTrashed()->with(['rol', 'ratingProfile', 'assignment.shift']);
+        $query = User::withTrashed()->with(['rol', 'permissions', 'ratingProfile', 'assignment.shift']);
 
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
@@ -30,7 +30,11 @@ class UserRepository
 
         if ($roleName) {
             $query->whereHas('rol', function ($subQuery) use ($roleName) {
-                $subQuery->where('rol_name', $roleName);
+                if ($roleName === 'common') {
+                    $subQuery->whereIn('rol_name', ['conductor', 'pasajero']);
+                } else {
+                    $subQuery->where('rol_name', $roleName);
+                }
             });
         }
 
@@ -51,7 +55,11 @@ class UserRepository
         }
         if ($roleName) {
             $baseCountQuery->whereHas('rol', function ($subQuery) use ($roleName) {
-                $subQuery->where('rol_name', $roleName);
+                if ($roleName === 'common') {
+                    $subQuery->whereIn('rol_name', ['conductor', 'pasajero']);
+                } else {
+                    $subQuery->where('rol_name', $roleName);
+                }
             });
         }
 
@@ -75,6 +83,7 @@ class UserRepository
                 'created_at' => $user->created_at,
                 'deleted_at' => $user->deleted_at,
                 'role' => $roleName,
+                'permissions' => $user->permissions->pluck('name')->values()->all(),
             ];
 
             if ($roleName === 'conductor') {
@@ -168,6 +177,4 @@ class UserRepository
         ]);
     }
 }
-
-
 

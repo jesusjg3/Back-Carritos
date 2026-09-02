@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Http\Requests\StoreTripRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\UpdateAdminRequest;
 use App\Events\DashboardStatsUpdated;
 use App\Events\DriverGlobalLocationUpdated;
 use App\Events\DriverOffline;
@@ -46,6 +48,26 @@ class SecurityRegressionTest extends TestCase
 
         $this->assertNotContains('api/test-broadcast/{id}', $uris);
         $this->assertNotContains('api/test-broadcast-started/{id}', $uris);
+    }
+
+    public function test_user_and_admin_management_are_separated(): void
+    {
+        $userRules = (new UpdateUserRequest())->rules();
+        $adminRules = (new UpdateAdminRequest())->rules();
+
+        $this->assertArrayNotHasKey('rol_id', $userRules);
+        $this->assertArrayNotHasKey('permissions', $userRules);
+        $this->assertArrayHasKey('permissions', $adminRules);
+
+        $adminUpdate = collect(Route::getRoutes())->first(fn ($route) =>
+            $route->uri() === 'api/users/admins/{id}' && in_array('PUT', $route->methods(), true)
+        );
+        $commonUpdate = collect(Route::getRoutes())->first(fn ($route) =>
+            $route->uri() === 'api/users/{id}' && in_array('PUT', $route->methods(), true)
+        );
+
+        $this->assertContains('permission:manage_admins', $adminUpdate?->middleware() ?? []);
+        $this->assertContains('permission:manage_users', $commonUpdate?->middleware() ?? []);
     }
 
     public function test_trip_request_outside_the_campus_geofence_is_rejected(): void

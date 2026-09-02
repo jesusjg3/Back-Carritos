@@ -36,7 +36,26 @@ class UserService
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'rol_id' => $driverRole->id,
-            'is_active' => true,
+            'is_active' => $data['is_active'] ?? true,
+        ]);
+
+        return $this->userRepo->find($user->id);
+    }
+
+    public function createPassenger(array $data)
+    {
+        $passengerRole = $this->rolRepo->findByName('pasajero');
+
+        if (!$passengerRole) {
+            throw new \Exception('El rol de pasajero no existe.');
+        }
+
+        $user = $this->userRepo->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'rol_id' => $passengerRole->id,
+            'is_active' => $data['is_active'] ?? true,
         ]);
 
         return $this->userRepo->find($user->id);
@@ -75,13 +94,22 @@ class UserService
         if ($id === 1) {
             throw new \Exception('No se puede alterar el estado del Super Administrador.');
         }
+        $user = $this->userRepo->find($id);
+        if ($user->rol?->rol_name === 'admin') {
+            throw new \Exception('Las cuentas administrativas requieren permisos de administrador.');
+        }
         return $this->userRepo->toggleStatus($id);
     }
 
     public function updateUser(int $id, array $data)
     {
         return DB::transaction(function () use ($id, $data) {
-            $allowedFields = ['name', 'email', 'rol_id', 'password'];
+            $target = $this->userRepo->find($id);
+            if ($target->rol?->rol_name === 'admin') {
+                throw new \Exception('Las cuentas administrativas requieren permisos de administrador.');
+            }
+
+            $allowedFields = ['name', 'email', 'password', 'is_active'];
             $updateData = array_intersect_key($data, array_flip($allowedFields));
 
             if (!empty($updateData['password'])) {
@@ -90,10 +118,6 @@ class UserService
 
             $updatedUser = $this->userRepo->update($id, $updateData);
 
-            if (isset($data['permissions']) && is_array($data['permissions'])) {
-                $updatedUser->permissions()->sync($data['permissions']);
-            }
-
             return [
                 'id' => $updatedUser->id,
                 'name' => $updatedUser->name,
@@ -101,9 +125,72 @@ class UserService
                 'role' => $updatedUser->rol->rol_name ?? null,
                 'role_id' => $updatedUser->rol_id,
                 'is_active' => $updatedUser->is_active,
-                'permissions' => $updatedUser->permissions->pluck('name')->toArray()
+                'permissions' => []
             ];
         });
+    }
+
+    public function updateAdmin(int $id, array $data)
+    {
+        return DB::transaction(function () use ($id, $data) {
+            if ($id === 1) {
+                throw new \Exception('No se puede modificar la cuenta del Super Administrador.');
+            }
+
+            $admin = $this->userRepo->find($id);
+            if ($admin->rol?->rol_name !== 'admin') {
+                throw new \Exception('La cuenta seleccionada no es administrativa.');
+            }
+
+            $updateData = array_intersect_key($data, array_flip(['name', 'email', 'password', 'is_active']));
+            if (!empty($updateData['password'])) {
+                $updateData['password'] = Hash::make($updateData['password']);
+            }
+
+            $updatedAdmin = $this->userRepo->update($id, $updateData);
+            if (array_key_exists('permissions', $data)) {
+                $updatedAdmin->permissions()->sync($data['permissions'] ?? []);
+            }
+
+            $updatedAdmin->load(['rol', 'permissions']);
+            return [
+                'id' => $updatedAdmin->id,
+                'name' => $updatedAdmin->name,
+                'email' => $updatedAdmin->email,
+                'role' => $updatedAdmin->rol->rol_name ?? null,
+                'role_id' => $updatedAdmin->rol_id,
+                'is_active' => $updatedAdmin->is_active,
+                'permissions' => $updatedAdmin->permissions->pluck('name')->values()->all(),
+            ];
+        });
+    }
+
+    public function toggleAdminStatus(int $id, ?int $actingUserId = null)
+    {
+        if ($actingUserId === $id || $id === 1) {
+            throw new \Exception('No se puede alterar esta cuenta administrativa.');
+        }
+
+        $admin = $this->userRepo->find($id);
+        if ($admin->rol?->rol_name !== 'admin') {
+            throw new \Exception('La cuenta seleccionada no es administrativa.');
+        }
+
+        return $this->userRepo->toggleStatus($id);
+    }
+
+    public function deleteAdmin(int $id, ?int $actingUserId = null)
+    {
+        if ($actingUserId === $id || $id === 1) {
+            throw new \Exception('No se puede eliminar esta cuenta administrativa.');
+        }
+
+        $admin = $this->userRepo->find($id);
+        if ($admin->rol?->rol_name !== 'admin') {
+            throw new \Exception('La cuenta seleccionada no es administrativa.');
+        }
+
+        return $this->userRepo->delete($id);
     }
 
     public function deleteUser(int $id, ?int $actingUserId = null)
@@ -116,6 +203,9 @@ class UserService
         }
 
         $user = $this->userRepo->find($id);
+        if ($user->rol?->rol_name === 'admin') {
+            throw new \Exception('Las cuentas administrativas requieren permisos de administrador.');
+        }
         if ($user->assignment()->exists()) {
             throw new \Exception('No se puede eliminar el usuario porque tiene una asignación de conductor.');
         }
