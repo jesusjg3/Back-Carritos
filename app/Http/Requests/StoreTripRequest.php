@@ -56,27 +56,24 @@ class StoreTripRequest extends FormRequest
             $lat = $this->input('origin_lat');
             $lng = $this->input('origin_lng');
 
-            if ($lat && $lng) {
-                // Punto central aproximado del campus
-                $centerLat = -0.9525;
-                $centerLng = -80.7450;
+            if ($lat !== null && $lng !== null && config('services.campus.geofence_enabled', true)) {
+                // Punto central y radio configurables del campus.
+                $centerLat = (float) config('services.campus.latitude');
+                $centerLng = (float) config('services.campus.longitude');
+                $radiusKm = (float) config('services.campus.radius_km');
                 
                 // Calcular distancia en km (Fórmula de Haversine)
                 $earthRadius = 6371;
                 $dLat = deg2rad($lat - $centerLat);
                 $dLng = deg2rad($lng - $centerLng);
-                $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($centerLat)) * cos(deg2rad($lat)) * sin($dLng/2) * sin($dLng/2);
-                $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-                $distance = $earthRadius * $c;
+                $haversineValA = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($centerLat)) * cos(deg2rad($lat)) * sin($dLng/2) * sin($dLng/2);
+                $haversineValC = 2 * atan2(sqrt($haversineValA), sqrt(1-$haversineValA));
+                $distance = $earthRadius * $haversineValC;
 
-                // Límite de distancia de 1.5 km
-                if ($distance > 1.5) {
+                if ($distance > $radiusKm) {
                     $validator->errors()->add('origin_lat', 'Estás fuera de la zona de servicio permitida para pedir carritos.');
                 }
             }
         });
     }
 }
-
-
-

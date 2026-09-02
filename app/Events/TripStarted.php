@@ -11,6 +11,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Repositories\TripRepository;
 
 class TripStarted implements ShouldBroadcastNow
 {
@@ -33,14 +34,16 @@ class TripStarted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('passenger.' . $this->trip->passenger_id),
-        ];
+        $channels = [];
+        foreach ($this->trip->passengers as $passenger) {
+            $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+        }
+        return $channels;
     }
 
     public function broadcastWith(): array
     {
-        $this->trip->load(['driver.driverLocation', 'state']);
+        $this->trip->load(['state']);
 
         return [
             'trip' => [
@@ -51,8 +54,8 @@ class TripStarted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
-                    'latitude' => $this->trip->driver->driverLocation->latitude ?? null,
-                    'longitude' => $this->trip->driver->driverLocation->longitude ?? null,
+                    'latitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                 ] : null,
                 'origin' => [
                     'lat' => $this->trip->origin_lat,
@@ -63,7 +66,19 @@ class TripStarted implements ShouldBroadcastNow
                     'lat' => $this->trip->destination_lat,
                     'lng' => $this->trip->destination_lng,
                     'address' => $this->trip->destination_address
-                ]
+                ],
+                'passengers' => $this->trip->passengers->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'phone' => $p->phone,
+                        'status' => $p->pivot->status,
+                        'pickup_lat' => $p->pivot->pickup_lat,
+                        'pickup_lng' => $p->pivot->pickup_lng,
+                        'pickup_address' => $p->pivot->pickup_address,
+                        'passengers_count' => $p->pivot->passengers_count,
+                    ];
+                })
             ]
         ];
     }

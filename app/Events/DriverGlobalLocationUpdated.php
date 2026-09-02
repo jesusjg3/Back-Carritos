@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -15,15 +15,25 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
     public int $driverId;
     public float $latitude;
     public float $longitude;
+    public string $vehicleStatus;
+    public ?string $name;
+    public ?array $vehicle;
+    public bool $isInEvent;
+    public bool $isAvailable;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $driverId, float $latitude, float $longitude)
+    public function __construct(int $driverId, float $latitude, float $longitude, string $vehicleStatus = 'active', ?string $name = null, ?array $vehicle = null, bool $isInEvent = false, bool $isAvailable = true)
     {
         $this->driverId = $driverId;
         $this->latitude = $latitude;
         $this->longitude = $longitude;
+        $this->vehicleStatus = $vehicleStatus;
+        $this->name = $name;
+        $this->vehicle = $vehicle;
+        $this->isInEvent = $isInEvent;
+        $this->isAvailable = $isAvailable;
     }
 
     /**
@@ -33,9 +43,9 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        // Emitir a un canal PÚBLICO para monitoreo global
         return [
-            new Channel('drivers.live'),
+            new PrivateChannel('admin.live_tracking'),
+            new PrivateChannel('drivers.live'),
         ];
     }
 
@@ -48,6 +58,11 @@ class DriverGlobalLocationUpdated implements ShouldBroadcastNow
             'driver_id' => $this->driverId,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'vehicle_status' => $this->vehicleStatus,
+            'name' => $this->name,
+            'vehicle' => $this->vehicle,
+            'is_in_event' => $this->isInEvent,
+            'is_available' => $this->isAvailable,
             'timestamp' => now()->toISOString(),
         ];
     }

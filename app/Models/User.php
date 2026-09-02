@@ -27,8 +27,6 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'rol_id',
         'is_active',
-        'score',
-        'rating_count',
     ];
 
     /**
@@ -60,9 +58,14 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Rol::class);
     }
 
-    public function driverLocation(): HasOne
+    public function assignment()
     {
-        return $this->hasOne(DriverLocation::class);
+        return $this->hasOne(Assignment::class);
+    }
+
+    public function ratingProfile(): HasOne
+    {
+        return $this->hasOne(UserRating::class);
     }
 
     public function TripsAsPassengers()
@@ -73,6 +76,20 @@ class User extends Authenticatable implements JWTSubject
     public function TripsAsDrivers()
     {
         return $this->hasMany(Trip::class, 'driver_id');
+    }
+
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    public function hasPermission(string $permissionName): bool
+    {
+        if ($this->id === 1) {
+            return true;
+        }
+
+        return $this->permissions()->where('name', $permissionName)->exists();
     }
 
     /**
@@ -94,7 +111,8 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'role' => $this->rol->rol_name ?? null,
-            'is_active' => $this->is_active
+            'is_active' => $this->is_active,
+            'permissions' => $this->permissions->pluck('name')->toArray()
         ];
     }
 }

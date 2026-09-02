@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'osrm' => [
+        'url' => env('OSRM_URL', 'http://router.project-osrm.org/route/v1/driving/'),
+    ],
+
+    'campus' => [
+        'geofence_enabled' => filter_var(env('CAMPUS_GEOFENCE_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'latitude' => (float) env('CAMPUS_CENTER_LAT', -0.9525),
+        'longitude' => (float) env('CAMPUS_CENTER_LNG', -80.7450),
+        'radius_km' => (float) env('CAMPUS_RADIUS_KM', 1.5),
+    ],
+
 ];

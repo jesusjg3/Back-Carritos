@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UserService
 {
@@ -16,9 +18,9 @@ class UserService
         $this->rolRepo = $rolRepo;
     }
 
-    public function listUsers(int $perPage, ?string $search, ?int $roleId, ?bool $isActive)
+    public function listUsers(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        return $this->userRepo->paginate($perPage, $search, $roleId, $isActive);
+        return $this->userRepo->paginate($perPage, $search, $roleId, $status, $roleName);
     }
 
     public function createDriver(array $data)
@@ -32,7 +34,7 @@ class UserService
         $user = $this->userRepo->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Hash::make($data['password']),
             'rol_id' => $driverRole->id,
             'is_active' => true,
         ]);
@@ -40,33 +42,82 @@ class UserService
         return $this->userRepo->find($user->id);
     }
 
-    public function toggleUserStatus(int $id)
+    public function createAdmin(array $data)
     {
+        return DB::transaction(function () use ($data) {
+            $adminRole = $this->rolRepo->findByName('admin');
+
+            if (!$adminRole) {
+                throw new \Exception('El rol de administrador no existe.');
+            }
+
+            $user = $this->userRepo->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'rol_id' => $adminRole->id,
+                'is_active' => true,
+            ]);
+
+            if (isset($data['permissions']) && is_array($data['permissions'])) {
+                $user->permissions()->sync($data['permissions']);
+            }
+
+            return $this->userRepo->find($user->id);
+        });
+    }
+
+    public function toggleUserStatus(int $id, ?int $actingUserId = null)
+    {
+        if ($actingUserId === $id) {
+            throw new \Exception('No puedes desactivar tu propia cuenta.');
+        }
+        if ($id === 1) {
+            throw new \Exception('No se puede alterar el estado del Super Administrador.');
+        }
         return $this->userRepo->toggleStatus($id);
     }
 
     public function updateUser(int $id, array $data)
     {
-        $allowedFields = ['name', 'email', 'rol_id'];
-        $updateData = array_intersect_key($data, array_flip($allowedFields));
+        return DB::transaction(function () use ($id, $data) {
+            $allowedFields = ['name', 'email', 'rol_id', 'password'];
+            $updateData = array_intersect_key($data, array_flip($allowedFields));
 
-        $updatedUser = $this->userRepo->update($id, $updateData);
+            if (!empty($updateData['password'])) {
+                $updateData['password'] = Hash::make($updateData['password']);
+            }
 
-        return [
-            'id' => $updatedUser->id,
-            'name' => $updatedUser->name,
-            'email' => $updatedUser->email,
-            'role' => $updatedUser->rol->rol_name ?? null,
-            'role_id' => $updatedUser->rol_id,
-            'is_active' => $updatedUser->is_active,
-        ];
+            $updatedUser = $this->userRepo->update($id, $updateData);
+
+            if (isset($data['permissions']) && is_array($data['permissions'])) {
+                $updatedUser->permissions()->sync($data['permissions']);
+            }
+
+            return [
+                'id' => $updatedUser->id,
+                'name' => $updatedUser->name,
+                'email' => $updatedUser->email,
+                'role' => $updatedUser->rol->rol_name ?? null,
+                'role_id' => $updatedUser->rol_id,
+                'is_active' => $updatedUser->is_active,
+                'permissions' => $updatedUser->permissions->pluck('name')->toArray()
+            ];
+        });
     }
 
-    public function deleteUser(int $id)
+    public function deleteUser(int $id, ?int $actingUserId = null)
     {
-        $currentUser = auth('api')->user();
-        if ($currentUser && $currentUser->id === $id) {
+        if ($actingUserId === $id) {
             throw new \Exception('No puedes eliminar tu propia cuenta.');
+        }
+        if ($id === 1) {
+            throw new \Exception('No se puede eliminar la cuenta del Super Administrador.');
+        }
+
+        $user = $this->userRepo->find($id);
+        if ($user->assignment()->exists()) {
+            throw new \Exception('No se puede eliminar el usuario porque tiene una asignación de conductor.');
         }
 
         $this->userRepo->delete($id);

@@ -16,10 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'is_active' => \App\Http\Middleware\CheckActiveUser::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
 
-        // Configurar CORS para todas las rutas API
-        $middleware->statefulApi();
+        // Configurar CORS para todas las rutas API (Nota: statefulApi habilitaba Sanctum, lo cual interfiere con JWT en localhost)
+        // $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

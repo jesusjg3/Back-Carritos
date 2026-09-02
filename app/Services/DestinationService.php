@@ -23,6 +23,27 @@ class DestinationService
         return $this->destinationRepo->allIncludeInactive();
     }
 
+    public function listDestinations(array $filters, $user = null)
+    {
+        if (isset($filters['only_active']) && filter_var($filters['only_active'], FILTER_VALIDATE_BOOLEAN)) {
+            return $this->destinationRepo->all();
+        }
+
+        if (isset($filters['per_page'])) {
+            $perPage = (int) $filters['per_page'];
+            $search = $filters['search'] ?? null;
+            $status = $filters['status'] ?? null;
+
+            return $this->destinationRepo->paginateAdminDestinations($perPage, $search, $status);
+        }
+
+        if ($user && $user->rol_id === 1) {
+            return $this->destinationRepo->allIncludeInactive();
+        }
+
+        return $this->destinationRepo->all();
+    }
+
     public function getDestinationById(int $id)
     {
         return $this->destinationRepo->find($id);
@@ -41,11 +62,6 @@ class DestinationService
     public function deleteDestination(int $id)
     {
         return $this->destinationRepo->delete($id);
-    }
-
-    public function restoreDestination(int $id)
-    {
-        return $this->destinationRepo->restore($id);
     }
 
     public function toggleDestinationStatus(int $id)

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
 use Illuminate\Queue\SerializesModels;
+use App\Models\Trip;
 
 class TripLocationUpdated implements ShouldBroadcastNow
 {
@@ -31,16 +32,20 @@ class TripLocationUpdated implements ShouldBroadcastNow
         $this->status = $status;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('trip.' . $this->tripId),
         ];
+
+        $trip = Trip::with('passengers')->find($this->tripId);
+        if ($trip) {
+            foreach ($trip->passengers as $passenger) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
+        }
+
+        return $channels;
     }
 
     /**
@@ -48,6 +53,23 @@ class TripLocationUpdated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
+        $trip = Trip::with('passengers')->find($this->tripId);
+        $passengersData = [];
+        if ($trip) {
+            $passengersData = $trip->passengers->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'phone' => $p->phone,
+                    'status' => $p->pivot->status,
+                    'pickup_lat' => $p->pivot->pickup_lat,
+                    'pickup_lng' => $p->pivot->pickup_lng,
+                    'pickup_address' => $p->pivot->pickup_address,
+                    'passengers_count' => $p->pivot->passengers_count,
+                ];
+            });
+        }
+
         return [
             'trip_id' => $this->tripId,
             'driver_id' => $this->driverId,
@@ -55,6 +77,7 @@ class TripLocationUpdated implements ShouldBroadcastNow
             'longitude' => $this->longitude,
             'status' => $this->status, // Useful for explicit phase handling
             'timestamp' => now()->toISOString(),
+            'passengers' => $passengersData,
         ];
     }
 

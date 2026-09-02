@@ -15,31 +15,36 @@ class TripCancelled implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $trip;
+    public $excludedPassengerIds;
 
-    public function __construct(Trip $trip)
+    public function __construct(Trip $trip, array $excludedPassengerIds = [])
     {
         $this->trip = $trip;
+        $this->excludedPassengerIds = $excludedPassengerIds;
     }
 
     public function broadcastWith()
     {
         return [
             'id' => $this->trip->id,
-            'message' => 'Trip cancelled'
+            'message' => 'Trip cancelled',
+            'trip' => [
+                'id' => $this->trip->id,
+                'cancel_reason' => $this->trip->cancel_reason
+            ],
+            'reason' => $this->trip->cancel_reason
         ];
     }
 
     public function broadcastOn()
     {
-        // Broadcast to 'drivers' to remove from request list
-        // And 'passenger.{id}' to notify passenger (if cancelled by driver/system, though here it's usually passenger cancelling)
-        // If passenger cancels, drivers need to know.
-        // If driver cancels, passenger needs to know.
-        // For simplicity, we broadcast to 'drivers' and the specific passenger channel.
-        return [
-            new PrivateChannel('drivers'),
-            new PrivateChannel('passenger.' . $this->trip->passenger_id)
-        ];
+        $channels = [new PrivateChannel('drivers')];
+        foreach ($this->trip->passengers as $passenger) {
+            if (!in_array($passenger->id, $this->excludedPassengerIds)) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
+        }
+        return $channels;
     }
 
     public function broadcastAs()

@@ -15,19 +15,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         $this->call([
             RolSeeder::class,
+            PermissionSeeder::class,
             StateSeeder::class,
-            TabSeeder::class,
             DestinationSeeder::class,
+            VehicleSeeder::class,
+            ShiftSeeder::class,
         ]);
 
         $adminRole = \App\Models\Rol::where('rol_name', 'admin')->first();
         $pasajeroRole = \App\Models\Rol::where('rol_name', 'pasajero')->first();
         $conductorRole = \App\Models\Rol::where('rol_name', 'conductor')->first();
 
+        // 1. Crear a los usuarios principales PRIMERO para asegurar que Admin sea el ID 1
         User::updateOrCreate(
             ['email' => 'admin@test.com'],
             [
@@ -57,6 +58,11 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // 2. Ahora sí, generar la data de prueba (que tomará los IDs a partir del 4)
+        $this->call([
+            DummyDataSeeder::class,
+        ]);
     }
 }
 

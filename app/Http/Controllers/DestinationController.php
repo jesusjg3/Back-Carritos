@@ -6,6 +6,7 @@ use App\Http\Requests\StoreDestinationRequest;
 use App\Http\Requests\UpdateDestinationRequest;
 use App\Services\DestinationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DestinationController extends Controller
 {
@@ -16,14 +17,9 @@ class DestinationController extends Controller
         $this->destinationService = $destinationService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $user = auth('api')->user();
-        if ($user && $user->rol_id === 1) {
-            $destinations = $this->destinationService->getAllAdminDestinations();
-        } else {
-            $destinations = $this->destinationService->getAllDestinations();
-        }
+        $destinations = $this->destinationService->listDestinations($request->all(), auth('api')->user());
         return response()->json($destinations);
     }
 
@@ -49,19 +45,6 @@ class DestinationController extends Controller
     {
         $this->destinationService->deleteDestination($id);
         return response()->json(null, 204);
-    }
-
-    public function restore(int $id): JsonResponse
-    {
-        try {
-            $destination = $this->destinationService->restoreDestination($id);
-            return response()->json([
-                'message' => 'Destino restaurado exitosamente',
-                'destination' => $destination
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
     }
 
     public function toggleStatus(int $id): JsonResponse

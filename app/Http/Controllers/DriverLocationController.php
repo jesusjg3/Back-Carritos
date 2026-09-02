@@ -4,75 +4,114 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateDriverLocationRequest;
 use App\Http\Requests\GetNearbyDriversRequest;
-use App\Services\DriverLocationService;
+use App\Services\LocationService;
+use App\Services\DisconnectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DriverLocationController extends Controller
 {
-    protected DriverLocationService $locationService;
-
-    public function __construct(DriverLocationService $locationService)
-    {
-        $this->locationService = $locationService;
-    }
+    public function __construct(
+        protected LocationService $locationService,
+        protected DisconnectService $disconnectService
+    ) {}
 
     public function updateDriverLocation(UpdateDriverLocationRequest $request): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $user = $request->user();
 
-            $location = $this->locationService->updateLocation(
-                $user,
-                $request->latitude,
-                $request->longitude
-            );
+        $data = $request->validated();
 
-            return response()->json([
-                'message' => 'Ubicación actualizada correctamente',
-                'location' => [
-                    'latitude' => $location->latitude,
-                    'longitude' => $location->longitude,
-                    'updated_at' => $location->last_update,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            $code = $e->getCode();
-            return response()->json(['error' => $e->getMessage()], is_int($code) && $code >= 100 && $code < 600 ? $code : 500);
+        $payload = $this->locationService->updateLocationAndBroadcast(
+            $user->id,
+            $user->name,
+            $data
+        );
+
+        if (!$payload) {
+            return response()->json(['message' => 'Actualización ignorada por desconexión pendiente'], 200);
         }
-    }
 
-    public function getNearbyDrivers(GetNearbyDriversRequest $request): JsonResponse
-    {
-        try {
-            $drivers = $this->locationService->getNearbyDrivers(
-                $request->latitude,
-                $request->longitude,
-                $request->input('radius', 5)
-            );
-
-            return response()->json([
-                'drivers' => $drivers,
-                'count' => $drivers->count(),
-                'search_center' => [
-                    'latitude' => $request->latitude,
-                    'longitude' => $request->longitude,
-                ],
-                'radius_km' => $request->input('radius', 5),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json([
+            'message' => 'Ubicación actualizada',
+            'driver' => $payload,
+        ]);
     }
 
     public function setDriverOffline(Request $request): JsonResponse
     {
-        try {
-            $user = auth()->user();
-            $this->locationService->setOffline($user);
-            return response()->json(['message' => 'Status set to offline']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        $user = $request->user();
+
+        $this->locationService->setDriverOffline($user->id);
+
+        return response()->json(['message' => 'Conductor marcado como offline']);
+    }
+
+    public function requestDisconnect(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $this->disconnectService->requestDisconnect($user, $data['reason']);
+
+        return response()->json(['message' => 'Solicitud enviada a los administradores.']);
+    }
+
+    public function approveDisconnect(Request $request, int $id): JsonResponse
+    {
+
+        $this->disconnectService->approveDisconnect($id);
+
+        return response()->json(['message' => 'Desconexión del conductor aprobada.']);
+    }
+
+    public function rejectDisconnect(Request $request, int $id): JsonResponse
+    {
+
+        $this->disconnectService->rejectDisconnect($id);
+
+        return response()->json(['message' => 'Desconexión del conductor rechazada.']);
+    }
+
+    public function getNearbyDrivers(GetNearbyDriversRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $drivers = $this->locationService->getNearbyDrivers(
+            (float) $data['latitude'],
+            (float) $data['longitude'],
+            (float) ($data['radius'] ?? 10.0)
+        );
+
+        return response()->json(['drivers' => $drivers]);
+    }
+
+    public function getOnlineDrivers(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $isAdmin = $user && $user->rol?->rol_name === 'admin';
+
+        $drivers = $this->locationService->getOnlineDrivers($isAdmin);
+
+        return response()->json($drivers);
+    }
+
+    public function getAllDisconnectRequests(Request $request): JsonResponse
+    {
+
+        $perPage = (int) $request->input('per_page', 10);
+        $status = $request->input('status');
+        $search = $request->input('search');
+
+        $requests = $this->disconnectService->getPaginatedRequests($perPage, $status, $search);
+        $stats = $this->disconnectService->getGlobalStats();
+
+        // Convert the paginator to an array and merge stats
+        $response = $requests->toArray();
+        $response = array_merge($response, $stats);
+
+        return response()->json($response);
     }
 }

@@ -11,19 +11,22 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Repositories\TripRepository;
 
 class TripAccepted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $trip;
+    public $passengerId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Trip $trip)
+    public function __construct(Trip $trip, ?int $passengerId = null)
     {
         $this->trip = $trip;
+        $this->passengerId = $passengerId;
     }
 
     /**
@@ -33,15 +36,21 @@ class TripAccepted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('passenger.' . $this->trip->passenger_id),
-        ];
+        $channels = [];
+        if ($this->passengerId) {
+            $channels[] = new PrivateChannel('passenger.' . $this->passengerId);
+        } else {
+            foreach ($this->trip->passengers as $passenger) {
+                $channels[] = new PrivateChannel('passenger.' . $passenger->id);
+            }
+        }
+        return $channels;
     }
 
     public function broadcastWith(): array
     {
         // Cargar relaciones necesarias para el frontend
-        $this->trip->load(['driver.driverLocation', 'state']);
+        $this->trip->load(['state']);
 
         return [
             'trip' => [
@@ -51,10 +60,10 @@ class TripAccepted implements ShouldBroadcastNow
                     'id' => $this->trip->driver->id,
                     'name' => $this->trip->driver->name,
                     'email' => $this->trip->driver->email,
-                    'rating' => $this->trip->driver->score ?? 5.0,
-                    'score' => $this->trip->driver->score ?? 5.0,
-                    'latitude' => $this->trip->driver->driverLocation->latitude ?? null,
-                    'longitude' => $this->trip->driver->driverLocation->longitude ?? null,
+                    'rating' => $this->trip->driver->ratingProfile->score ?? 5.0,
+                    'score' => $this->trip->driver->ratingProfile->score ?? 5.0,
+                    'latitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['latitude'] ?? null,
+                    'longitude' => app(TripRepository::class)->getDriverLocation($this->trip->driver_id)['longitude'] ?? null,
                     // Agregar más campos si es necesario (foto, placa, etc.)
                 ] : null,
                 'origin' => [
@@ -66,7 +75,19 @@ class TripAccepted implements ShouldBroadcastNow
                     'lat' => $this->trip->destination_lat,
                     'lng' => $this->trip->destination_lng,
                     'address' => $this->trip->destination_address
-                ]
+                ],
+                'passengers' => $this->trip->passengers->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'phone' => $p->phone,
+                        'status' => $p->pivot->status,
+                        'pickup_lat' => $p->pivot->pickup_lat,
+                        'pickup_lng' => $p->pivot->pickup_lng,
+                        'pickup_address' => $p->pivot->pickup_address,
+                        'passengers_count' => $p->pivot->passengers_count,
+                    ];
+                })
             ]
         ];
     }

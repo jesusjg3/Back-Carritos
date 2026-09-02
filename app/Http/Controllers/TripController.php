@@ -8,6 +8,7 @@ use App\Services\TripService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TripController extends Controller
 {
@@ -21,14 +22,13 @@ class TripController extends Controller
     /**
      * Get All Trips for Administrator Log.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        if ($user && $user->rol_id === 1) {
-            $trips = $this->tripService->getAllAdminTrips();
-            return response()->json($trips);
-        }
-        return response()->json(['error' => 'No autorizado'], 403);
+        $perPage = $request->integer('per_page', 10);
+        $search = $request->query('search');
+        $stateName = $request->query('state_name');
+        $trips = $this->tripService->getAllAdminTrips($perPage, $search, $stateName);
+        return response()->json($trips);
     }
 
     /**
@@ -37,7 +37,13 @@ class TripController extends Controller
     public function request(StoreTripRequest $request): JsonResponse
     {
         $user = Auth::user();
-        $trip = $this->tripService->requestTrip($request->validated(), $user);
+
+        try {
+            $trip = $this->tripService->requestTrip($request->validated(), $user);
+        } catch (\Exception $e) {
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
 
         return response()->json($trip, 201);
     }
@@ -45,15 +51,37 @@ class TripController extends Controller
     /**
      * Accept a pending Trip (Driver).
      */
-    public function accept(int $id): JsonResponse
+    public function accept(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
+        $passengerId = $request->input('passenger_id'); // Optional for shared trips
 
         try {
-            $updatedTrip = $this->tripService->acceptTripById($id, $user);
+            $updatedTrip = $this->tripService->acceptTripById($id, $user, $passengerId);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 409 ? 409 : 400;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 400;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    /**
+     * Accept a joining passenger for an active Trip (Driver).
+     */
+    public function acceptPassenger(Request $request, int $id): JsonResponse
+    {
+        $user = Auth::user();
+        $passengerId = $request->input('passenger_id');
+
+        if (!$passengerId) {
+            return response()->json(['error' => 'Se requiere el ID del pasajero.'], 400);
+        }
+
+        try {
+            $updatedTrip = $this->tripService->acceptPassengerInTrip($id, $user, $passengerId);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 400;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -63,14 +91,67 @@ class TripController extends Controller
      */
     public function start(int $id): JsonResponse
     {
-        $trip = Trip::findOrFail($id);
         $user = Auth::user();
 
         try {
-            $updatedTrip = $this->tripService->startTrip($trip, $user);
+            $updatedTrip = $this->tripService->startTrip($id, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 400 ? 400 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    public function boardPassenger(int $tripId, int $passengerId): JsonResponse
+    {
+        $user = Auth::user();
+
+        try {
+            $updatedTrip = $this->tripService->boardPassenger($tripId, $passengerId, $user);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    public function dropOffPassenger(int $tripId, int $passengerId): JsonResponse
+    {
+        $user = Auth::user();
+
+        try {
+            $updatedTrip = $this->tripService->dropOffPassenger($tripId, $passengerId, $user);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    public function cancelPassenger(int $tripId, int $passengerId): JsonResponse
+    {
+        $user = Auth::user();
+
+        try {
+            $updatedTrip = $this->tripService->cancelPassenger($tripId, $passengerId, $user);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            Log::error("cancelPassenger Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    public function rejectPassenger(int $tripId, int $passengerId): JsonResponse
+    {
+        $user = Auth::user();
+
+        try {
+            $updatedTrip = $this->tripService->rejectPassenger($tripId, $passengerId, $user);
+            return response()->json($updatedTrip);
+        } catch (\Exception $e) {
+            Log::error("rejectPassenger Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
@@ -80,39 +161,62 @@ class TripController extends Controller
      */
     public function finish(int $id): JsonResponse
     {
-        $trip = Trip::findOrFail($id);
         $user = Auth::user();
 
         try {
-            $updatedTrip = $this->tripService->finishTrip($trip, $user);
+            $updatedTrip = $this->tripService->finishTrip($id, $user);
             return response()->json($updatedTrip);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
+        }
+    }
+
+    /**
+     * Get Current Active Trip for User
+     */
+    public function current(): JsonResponse
+    {
+        $user = Auth::user();
+        
+        try {
+            $currentTrip = $this->tripService->getCurrentActiveTrip($user);
+            if ($currentTrip) {
+                return response()->json(['trip' => $currentTrip]);
+            }
+            return response()->json(['trip' => null], 200);
+        } catch (\Exception $e) {
+            Log::error("store Trip Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
     /**
      * Cancel a Trip.
      */
-    public function cancel(int $id): JsonResponse
+    public function cancel(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
+        $reason = $request->validate([
+            'reason' => 'nullable|string|max:255',
+        ])['reason'] ?? null;
+        
         try {
-            $result = $this->tripService->cancelTrip($id, $user);
+            $result = $this->tripService->cancelTrip($id, $user, $reason);
             return response()->json($result);
         } catch (\Exception $e) {
-            $status = $e->getCode() === 403 ? 403 : 500;
+            $status = in_array($e->getCode(), [400, 403, 409]) ? $e->getCode() : 500;
             return response()->json(['error' => $e->getMessage()], $status);
         }
     }
     /**
      * Get Trip History for Passenger.
      */
-    public function history(): JsonResponse
+    public function history(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $history = $this->tripService->getTripHistory($user);
+        $perPage = $request->integer('per_page', 15);
+        $history = $this->tripService->getTripHistory($user, $perPage);
         return response()->json($history);
     }
 }

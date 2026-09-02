@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAdminRequest;
+use App\Http\Requests\StoreDriverRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,24 +23,29 @@ class UserController extends Controller
         $perPage = $request->integer('per_page', 10);
         $search = $request->query('search');
         $roleId = $request->query('role_id');
-        $isActive = $request->has('is_active') ? $request->boolean('is_active') : null;
+        $roleName = $request->query('role_name');
+        $status = $request->query('status');
 
-        $users = $this->userService->listUsers($perPage, $search, $roleId, $isActive);
+        $users = $this->userService->listUsers($perPage, $search, $roleId, $status, $roleName);
 
         return response()->json($users);
     }
 
-    public function storeDriver(Request $request): JsonResponse
+    public function storeDriver(StoreDriverRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
-            'password' => 'required|string|min:8',
-        ]);
-
         try {
-            $driver = $this->userService->createDriver($request->all());
+            $driver = $this->userService->createDriver($request->validated());
             return response()->json($driver, 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function storeAdmin(StoreAdminRequest $request): JsonResponse
+    {
+        try {
+            $admin = $this->userService->createAdmin($request->validated());
+            return response()->json($admin, 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
@@ -46,7 +54,7 @@ class UserController extends Controller
     public function toggleStatus(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->toggleUserStatus($id);
+            $user = $this->userService->toggleUserStatus($id, auth('api')->id());
             return response()->json([
                 'message' => 'Estado del usuario actualizado',
                 'user' => $user
@@ -56,16 +64,16 @@ class UserController extends Controller
         }
     }
 
-    public function updateUser(Request $request, int $id): JsonResponse
+    public function updateUser(UpdateUserRequest $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id . ',id,deleted_at,NULL',
-            'rol_id' => 'sometimes|integer|exists:rols,id',
-        ]);
-
         try {
-            $user = $this->userService->updateUser($id, $validated);
+            $data = $request->validated();
+            // Asegurar que si permissions viene vacío, se respete para poder limpiar los permisos
+            if ($request->has('permissions')) {
+                $data['permissions'] = $request->input('permissions', []);
+            }
+
+            $user = $this->userService->updateUser($id, $data);
             return response()->json([
                 'message' => 'Usuario actualizado correctamente',
                 'user' => $user
@@ -78,7 +86,7 @@ class UserController extends Controller
     public function deleteUser(int $id): JsonResponse
     {
         try {
-            $this->userService->deleteUser($id);
+            $this->userService->deleteUser($id, auth('api')->id());
             return response()->json([
                 'message' => 'Usuario eliminado correctamente'
             ]);

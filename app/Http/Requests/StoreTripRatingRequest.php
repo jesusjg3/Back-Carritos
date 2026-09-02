@@ -16,6 +16,7 @@ class StoreTripRatingRequest extends FormRequest
         return [
             'score' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
+            'receiver_id' => 'nullable|integer|exists:users,id',
         ];
     }
 

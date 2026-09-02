@@ -37,6 +37,9 @@ class RolRepository
     public function delete(int $id)
     {
         $rol = Rol::findOrFail($id);
+        if ($rol->users()->exists()) {
+            abort(422, 'No se puede eliminar el rol porque tiene usuarios asignados.');
+        }
         return $rol->delete();
     }
 }

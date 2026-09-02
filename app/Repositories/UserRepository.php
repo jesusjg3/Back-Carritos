@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use App\Models\UserRating;
 use Illuminate\Support\Facades\Hash;
 
 class UserRepository
@@ -12,14 +13,14 @@ class UserRepository
         return User::with('rol')->get();
     }
 
-    public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?bool $isActive = null)
+    public function paginate(int $perPage = 10, ?string $search = null, ?int $roleId = null, ?string $status = null, ?string $roleName = null)
     {
-        $query = User::with('rol')->withTrashed();
+        $query = User::withTrashed()->with(['rol', 'ratingProfile', 'assignment.shift']);
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%");
             });
         }
 
@@ -27,11 +28,80 @@ class UserRepository
             $query->where('rol_id', $roleId);
         }
 
-        if ($isActive !== null) {
-            $query->where('is_active', $isActive);
+        if ($roleName) {
+            $query->whereHas('rol', function ($subQuery) use ($roleName) {
+                $subQuery->where('rol_name', $roleName);
+            });
         }
 
-        return $query->paginate($perPage);
+        if ($status !== null) {
+            if ($status === 'active') {
+                $query->where('is_active', true)->whereNull('deleted_at');
+            } elseif ($status === 'deleted') {
+                $query->whereNotNull('deleted_at');
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false)->whereNull('deleted_at');
+            }
+        }
+
+        $baseCountQuery = User::withTrashed();
+
+        if ($roleId) {
+            $baseCountQuery->where('rol_id', $roleId);
+        }
+        if ($roleName) {
+            $baseCountQuery->whereHas('rol', function ($subQuery) use ($roleName) {
+                $subQuery->where('rol_name', $roleName);
+            });
+        }
+
+        $counts = (clone $baseCountQuery)->selectRaw('
+            COUNT(*) as total_registrados,
+            COUNT(CASE WHEN is_active = false AND deleted_at IS NULL THEN 1 END) as total_inactivos,
+            COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as total_eliminados
+        ')->first();
+        $paginator = $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC')
+                           ->orderBy('id', 'desc')
+                           ->paginate($perPage);
+
+        $paginator->getCollection()->transform(function ($user) {
+            $roleName = $user->rol ? strtolower($user->rol->rol_name) : 'pasajero';
+            
+            $data = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_active' => $user->deleted_at ? false : $user->is_active,
+                'created_at' => $user->created_at,
+                'deleted_at' => $user->deleted_at,
+                'role' => $roleName,
+            ];
+
+            if ($roleName === 'conductor') {
+                $data['score'] = $user->ratingProfile ? $user->ratingProfile->score : 5.0;
+                
+                if ($user->assignment && $user->assignment->shift) {
+                    $shift = $user->assignment->shift;
+                    $now = now()->format('H:i:s');
+                    $data['is_in_shift'] = $now >= $shift->start_time && $now <= $shift->end_time;
+                    $data['shift_id'] = $shift->id;
+                    $data['shift_name'] = $shift->name;
+                } else {
+                    $data['is_in_shift'] = false;
+                    $data['shift_id'] = null;
+                    $data['shift_name'] = null;
+                }
+            }
+
+            return $data;
+        });
+
+        $result = $paginator->toArray();
+        $result['total_registrados'] = (int) ($counts->total_registrados ?? 0);
+        $result['total_inactivos'] = (int) ($counts->total_inactivos ?? 0);
+        $result['total_eliminados'] = (int) ($counts->total_eliminados ?? 0);
+
+        return $result;
     }
 
     public function find($id)
@@ -46,18 +116,12 @@ class UserRepository
 
     public function create(array $data)
     {
-        $data["password"] = Hash::make($data["password"]);
         return User::create($data);
     }
 
     public function update($id, array $data)
     {
         $user = User::findOrFail($id);
-
-        if (!empty($data["password"])) {
-            $data["password"] = Hash::make($data["password"]);
-        }
-
         $user->update($data);
         return $user;
     }
@@ -69,10 +133,39 @@ class UserRepository
 
     public function toggleStatus($id)
     {
-        $user = User::with('rol')->findOrFail($id);
+        $user = User::findOrFail($id);
         $user->is_active = !$user->is_active;
         $user->save();
         return $user;
+    }
+
+    public function getRatingProfile(int $userId)
+    {
+        return UserRating::firstOrCreate(
+            ['user_id' => $userId],
+            ['score' => 5.0, 'rating_count' => 0]
+        );
+    }
+
+    public function getRatingProfileForUpdate(int $userId)
+    {
+        $ratingProfile = UserRating::where('user_id', $userId)->lockForUpdate()->first();
+        if (!$ratingProfile) {
+            $ratingProfile = UserRating::create([
+                'user_id' => $userId, 
+                'score' => 5.0, 
+                'rating_count' => 0
+            ]);
+        }
+        return $ratingProfile;
+    }
+
+    public function updateRatingProfile(int $userId, float $score, int $ratingCount)
+    {
+        return UserRating::where('user_id', $userId)->update([
+            'score' => $score,
+            'rating_count' => $ratingCount,
+        ]);
     }
 }
 

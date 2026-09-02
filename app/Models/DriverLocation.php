@@ -44,8 +44,9 @@ class DriverLocation extends Model
     /**
      * Scope para buscar conductores cercanos
      */
-    public function scopeNearby($query, $latitude, $longitude, $radiusInKm = 5)
+    public function scopeNearby($query, $latitude, $longitude, ?float $radiusInKm = null)
     {
+        $radiusInKm = $radiusInKm ?? (float) env('DRIVER_SEARCH_RADIUS_KM', 5);
         // Usar fórmula de Haversine para calcular distancia
         $haversine = "(6371 * acos(cos(radians($latitude)) 
                     * cos(radians(latitude)) 

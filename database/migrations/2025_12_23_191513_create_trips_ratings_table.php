@@ -16,6 +16,10 @@ return new class extends Migration {
             $table->decimal('rating'); // 1 - 5
             $table->text('comment')->nullable();
             $table->timestamps();
+            
+            
+            $table->unique(['trip_id', 'emitter_id', 'receiver_id']);
+            $table->index('receiver_id');
         });
     }
 

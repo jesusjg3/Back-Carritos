@@ -6,6 +6,7 @@ use App\Repositories\StateRepository;
 
 class StatesService
 {
+    const RESERVED_IDS = [1, 2, 3, 4, 5];
     protected StateRepository $stateRepository;
 
     public function __construct(StateRepository $stateRepository)
@@ -51,6 +52,9 @@ class StatesService
      */
     public function deleteState(int $id)
     {
+        if (in_array($id, self::RESERVED_IDS)) {
+            abort(422, 'No se puede eliminar un estado crítico del sistema.');
+        }
         return $this->stateRepository->delete($id);
     }
 }
